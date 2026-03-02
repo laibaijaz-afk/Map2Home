@@ -198,7 +198,7 @@ const handleLogin = async () => {
       // If a redirect path was provided in query, prefer it
       router.push({ path: desiredRedirect })
     } else {
-      // Default: go to named dashboard route
+      
       router.push({ name: 'dashboard' })
     }
     return
