@@ -770,7 +770,7 @@ watch(() => formData.value.constructionType, (newType) => {
   }
 })
 
-// Calculate plot area
+// calculate plot area
 const calculatedPlotArea = computed(() => {
   if (formData.value.plotLength && formData.value.plotWidth) {
     return (formData.value.plotLength * formData.value.plotWidth).toFixed(2)
