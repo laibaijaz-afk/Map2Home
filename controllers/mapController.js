@@ -17,7 +17,7 @@ const ensureMapsTable = async (connection) => {
   `);
 };
 
-// Helper function to get full URL for file path
+// Helper function to get full URL filepath
 const getFullUrl = (filePath, req) => {
   if (!filePath) return null;
   // If already a full URL, return as is
