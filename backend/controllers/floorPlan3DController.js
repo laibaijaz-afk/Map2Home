@@ -53,3 +53,56 @@ const syncMapTo3D = async (req, res) => {
   if (validationError) {
     return res.status(400).json({ success: false, message: validationError });
   }
+
+  const client = createAxiosClient();
+  if (!client) {
+    return res.status(503).json({
+      success: false,
+      message: '3D service is not configured on server',
+      code: 'FLOORPLAN3D_NOT_CONFIGURED'
+    });
+  }
+
+  const payload = {
+    mapData,
+    source,
+    revision: revision ?? Date.now(),
+    userId: req.user?.id || null
+  };
+
+  try {
+    const data = await forwardTo3DService(client, payload);
+    const model =
+      isObject(data?.model) ? data.model :
+      isObject(data?.result?.model) ? data.result.model :
+      {};
+
+    return res.json({
+      success: true,
+      revision: payload.revision,
+      model: {
+        url: model.url || model.modelUrl || null,
+        format: model.format || null,
+        mapData: model.mapData || data?.mapData || null
+      },
+      raw: process.env.NODE_ENV === 'development' ? data : undefined
+    });
+  } catch (error) {
+    const upstreamStatus = error?.response?.status || 502;
+    const upstreamMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      '3D service unavailable';
+
+    return res.status(upstreamStatus).json({
+      success: false,
+      message: `3D generation failed: ${upstreamMessage}`,
+      code: 'FLOORPLAN3D_UPSTREAM_ERROR'
+    });
+  }
+};
+
+module.exports = {
+  syncMapTo3D
+};
