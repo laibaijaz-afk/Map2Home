@@ -499,3 +499,254 @@ const isWebGLAvailable = () => {
 const initThree = () => {
   console.log('[3DViewer] Initializing Three.js...')
   
+  if (!isWebGLAvailable()) {
+    error.value = 'WebGL is not supported in your browser.'
+    return false
+  }
+  
+  if (!canvasRef.value || !containerRef.value) {
+    console.error('[3DViewer] Canvas or container not found')
+    return false
+  }
+
+  const container = containerRef.value
+  const canvas = canvasRef.value
+  let width = container.clientWidth || 800
+  let height = container.clientHeight || 600
+
+  try {
+    clock = new THREE.Clock()
+    
+    scene = new THREE.Scene()
+    scene.background = new THREE.Color(0xf0f0f0)
+
+    // Create camera with very large far plane for architectural drawings
+    camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000000)
+    camera.position.set(0, playerHeight, 500)
+
+    // Create renderer
+    renderer = new THREE.WebGLRenderer({ 
+      canvas, 
+      antialias: true,
+      alpha: true
+    })
+    renderer.setSize(width, height)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.0
+
+    // Create Orbit Controls
+    orbitControls = new OrbitControls(camera, renderer.domElement)
+    orbitControls.enableDamping = true
+    orbitControls.dampingFactor = 0.05
+    orbitControls.screenSpacePanning = true
+    orbitControls.minDistance = 100
+    orbitControls.maxDistance = 20000
+    orbitControls.maxPolarAngle = Math.PI / 2
+
+    // Create Pointer Lock Controls for walk mode
+    pointerControls = new PointerLockControls(camera, document.body)
+    
+    pointerControls.addEventListener('lock', () => {
+      isPointerLocked.value = true
+    })
+    
+    pointerControls.addEventListener('unlock', () => {
+      isPointerLocked.value = false
+    })
+
+    addLights()
+
+    // Initialize mini map
+    initMiniMap()
+
+    console.log('[3DViewer] Three.js initialized successfully')
+    return true
+  } catch (err) {
+    console.error('[3DViewer] Error:', err)
+    error.value = err.message
+    return false
+  }
+}
+
+// Add lighting to the scene
+const addLights = () => {
+  scene.children = scene.children.filter(child => !(child instanceof THREE.Light))
+  
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7)
+  scene.add(ambientLight)
+
+  const sunLight = new THREE.DirectionalLight(0xffffff, 0.9)
+  sunLight.position.set(2000, 3000, 1000)
+  sunLight.castShadow = true
+  sunLight.shadow.mapSize.width = 4096
+  sunLight.shadow.mapSize.height = 4096
+  const shadowSize = expandedBounds ? Math.max(expandedBounds.maxX - expandedBounds.minX, expandedBounds.maxY - expandedBounds.minY) * 1.5 : 10000
+  sunLight.shadow.camera.near = 100
+  sunLight.shadow.camera.far = shadowSize * 2
+  sunLight.shadow.camera.left = -shadowSize
+  sunLight.shadow.camera.right = shadowSize
+  sunLight.shadow.camera.top = shadowSize
+  sunLight.shadow.camera.bottom = -shadowSize
+  scene.add(sunLight)
+
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.3)
+  fillLight.position.set(-1000, 1000, -1000)
+  scene.add(fillLight)
+
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4)
+  scene.add(hemiLight)
+}
+
+// Initialize mini map
+const initMiniMap = () => {
+  if (!miniMapRef.value) return
+  
+  const canvas = miniMapRef.value
+  miniMapRenderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+  miniMapRenderer.setSize(160, 160)
+  
+  miniMapCamera = new THREE.OrthographicCamera(-1000, 1000, 1000, -1000, 1, 10000)
+  miniMapCamera.up.set(0, 0, -1)
+  miniMapCamera.position.set(0, 5000, 0)
+  miniMapCamera.lookAt(0, 0, 0)
+}
+
+// Add grid helper
+const addGridHelper = () => {
+  if (!scene || !expandedBounds) return
+  
+  if (gridHelper) {
+    scene.remove(gridHelper)
+    gridHelper = null
+  }
+  
+  if (!showGrid.value) return
+  
+  const size = Math.max(expandedBounds.maxX - expandedBounds.minX, expandedBounds.maxY - expandedBounds.minY) * 1.3
+  const divisions = 30
+  
+  gridHelper = new THREE.GridHelper(size, divisions, 0x4f46e5, 0x334155)
+  gridHelper.position.y = 1
+  gridHelper.position.x = (expandedBounds.minX + expandedBounds.maxX) / 2
+  gridHelper.position.z = (expandedBounds.minY + expandedBounds.maxY) / 2
+  scene.add(gridHelper)
+}
+
+// Build 3D model from map data
+const buildModel = () => {
+  const floors = getFloorsArray()
+  if (floors.length === 0 || !floors[0]?.entities) {
+    error.value = 'No map data available'
+    return
+  }
+
+  console.log('[3DViewer] Building model:', floors.length, 'floor(s)')
+
+  // Calculate bounds across ALL floors so stacked floors stay aligned
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  let entityCount = 0
+
+  floors.forEach(floorData => {
+    (floorData.entities || []).forEach(entity => {
+      if (entity.type === 'line' && entity.start && entity.end) {
+        minX = Math.min(minX, entity.start.x, entity.end.x)
+        maxX = Math.max(maxX, entity.start.x, entity.end.x)
+        minY = Math.min(minY, entity.start.y, entity.end.y)
+        maxY = Math.max(maxY, entity.start.y, entity.end.y)
+        entityCount++
+      }
+    })
+  })
+
+  // Use metadata bounds as fallback or if they're more complete
+  if (!isFinite(minX) || entityCount === 0) {
+    const metaBounds = floors[0].metadata?.bounds
+    if (metaBounds && isFinite(metaBounds.minX)) {
+      minX = metaBounds.minX
+      minY = metaBounds.minY
+      maxX = metaBounds.maxX
+      maxY = metaBounds.maxY
+    } else {
+      minX = 0; minY = 0; maxX = 1000; maxY = 1000
+    }
+  }
+
+  mapBounds = { minX, minY, maxX, maxY }
+
+  const EXP = 6.0
+  const cx = (minX + maxX) / 2
+  const cy = (minY + maxY) / 2
+  expandedBounds = {
+    minX: cx + (minX - cx) * EXP,
+    maxX: cx + (maxX - cx) * EXP,
+    minY: cy + (minY - cy) * EXP,
+    maxY: cy + (maxY - cy) * EXP
+  }
+
+  // Calculate map size
+  const mapWidth = maxX - minX
+  const mapHeight = maxY - minY
+  const mapSize = Math.max(mapWidth, mapHeight)
+
+  // Wall height proportional to map size — kept short for a realistic look
+  const scaleFactor = mapSize / 1000
+  const calculatedWallHeight = Math.max(120 * scaleFactor, 40)
+  wallHeight.value = Math.round(Math.min(calculatedWallHeight, 200))
+
+  // Camera height for walk mode - lower = nearer to floor, more grounded view
+  playerHeight = wallHeight.value * 0.38 // ~38% of wall = perspective closer to floor
+
+  clearMeshes()
+
+  const h = wallHeight.value
+  const allowed3DLayers = new Set(['walls', 'doors', 'windows'])
+  let wallCount = 0
+  let vertexCount = 0
+
+  // Build each floor stacked vertically: floor f occupies [f*h, (f+1)*h]
+  floors.forEach((floorData, f) => {
+    const yOffset = f * h
+    const entities = floorData.entities || []
+
+    // Floor slab. Ground floor gets the rich textured floor; upper floors get a
+    // plain slab with a hole punched where the stairwell rises through it.
+    if (f === 0) {
+      createFloor(mapBounds)
+    } else {
+      // Stairwell opening for this floor = footprint of stairs on the floor BELOW
+      const wellRect = getStairFootprintWorld(floors[f - 1].entities || [])
+      createFloorPlane(mapBounds, yOffset, f, wellRect ? [wellRect] : [])
+    }
+
+    // Walls / doors / windows
+    entities.forEach(entity => {
+      if (entity.type === 'line' && entity.start && entity.end) {
+        const lid = entity.layerId || 'other'
+        if (!allowed3DLayers.has(lid)) return
+        const wall = createWall(entity, yOffset)
+        if (wall) {
+          wall.userData.layerId = lid
+          wall.userData.floorIndex = f
+          scene.add(wall)
+          wallMeshes.push(wall)
+          wallCount++
+          wall.traverse(child => {
+            if (child.isMesh) vertexCount += child.geometry.attributes.position.count
+          })
+        }
+      }
+    })
+
+    // Stairs: build only when there's a floor above to connect to
+    if (f < floors.length - 1) {
+      buildStairs(entities, yOffset, f)
+    }
+
+    // Room labels for this floor
+    addFloorLabels(entities, yOffset, f)
+  })
+
+  // Roof ceiling above the top floor
