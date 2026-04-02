@@ -1000,3 +1000,253 @@ const createFloorPlane = (bounds, yOffset, floorIndex = 0, holes = []) => {
   }
 
   const material = new THREE.MeshStandardMaterial({
+    color: 0xd4c8b0,
+    side: THREE.DoubleSide,
+    roughness: 0.7,
+    metalness: 0.05
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.rotation.x = -Math.PI / 2
+  mesh.position.set(centerX, yOffset, centerZ)
+  mesh.receiveShadow = true
+  mesh.userData.floorIndex = floorIndex
+  scene.add(mesh)
+  extraFloorCeilingMeshes.push(mesh)
+}
+
+// Create ceiling
+const createCeiling = (bounds) => {
+  const SPACE_EXPANSION = 6.0
+  // Match the wall span so the ceiling sits on the boundary walls, not beyond
+  const width = (bounds.maxX - bounds.minX) * SPACE_EXPANSION
+  const depth = (bounds.maxY - bounds.minY) * SPACE_EXPANSION
+  const centerX = (bounds.minX + bounds.maxX) / 2
+  const centerZ = (bounds.minY + bounds.maxY) / 2
+
+  const ceilCanvas = document.createElement('canvas')
+  ceilCanvas.width = 256
+  ceilCanvas.height = 256
+  const cCtx = ceilCanvas.getContext('2d')
+  cCtx.fillStyle = '#f8f6f2'
+  cCtx.fillRect(0, 0, 256, 256)
+  for (let i = 0; i < 200; i++) {
+    const s = 245 + Math.floor(Math.random() * 10)
+    cCtx.fillStyle = `rgb(${s},${s},${s - 2})`
+    cCtx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 4, 1 + Math.random() * 3)
+  }
+  const ceilTex = new THREE.CanvasTexture(ceilCanvas)
+  ceilTex.wrapS = THREE.RepeatWrapping
+  ceilTex.wrapT = THREE.RepeatWrapping
+  ceilTex.repeat.set(width / 400, depth / 400)
+
+  const geometry = new THREE.PlaneGeometry(width, depth)
+  const material = new THREE.MeshStandardMaterial({
+    map: ceilTex,
+    side: THREE.DoubleSide,
+    roughness: 0.95,
+    metalness: 0
+  })
+
+  ceilingMesh = new THREE.Mesh(geometry, material)
+  ceilingMesh.rotation.x = Math.PI / 2
+  ceilingMesh.position.set(centerX, wallHeight.value, centerZ)
+  ceilingMesh.receiveShadow = true
+  ceilingMesh.visible = showCeiling.value
+
+  scene.add(ceilingMesh)
+}
+
+const buildStairs = (entities, yOffset = 0, floorIndex = 0) => {
+  const SPACE_EXPANSION = 6.0
+  const stairEnts = entities.filter(e => e.type === 'line' && e.layerId === 'stairs' && e.start && e.end)
+  if (!stairEnts.length) return
+
+  const upEnts = entities.filter(e => e.type === 'line' && e.layerId === 'stair-up' && e.start && e.end)
+  const downEnts = entities.filter(e => e.type === 'line' && e.layerId === 'stair-down' && e.start && e.end)
+
+  // If this floor only has "down" (landing) but no "up" (start), the staircase was
+  // already built from the lower floor — skip to avoid duplicate geometry.
+  if (upEnts.length === 0 && downEnts.length > 0) {
+    console.log('[3DViewer] Skipping stair build — floor has "down" only (shared staircase built from lower floor)')
+    return
+  }
+
+  let sMinX = Infinity, sMinY = Infinity, sMaxX = -Infinity, sMaxY = -Infinity
+  for (const e of stairEnts) {
+    sMinX = Math.min(sMinX, e.start.x, e.end.x)
+    sMinY = Math.min(sMinY, e.start.y, e.end.y)
+    sMaxX = Math.max(sMaxX, e.start.x, e.end.x)
+    sMaxY = Math.max(sMaxY, e.start.y, e.end.y)
+  }
+  // Also include the "up" entity in the footprint so it doesn't sit outside
+  for (const e of upEnts) {
+    sMinX = Math.min(sMinX, e.start.x, e.end.x)
+    sMinY = Math.min(sMinY, e.start.y, e.end.y)
+    sMaxX = Math.max(sMaxX, e.start.x, e.end.x)
+    sMaxY = Math.max(sMaxY, e.start.y, e.end.y)
+  }
+
+  const mapCX = mapBounds ? (mapBounds.minX + mapBounds.maxX) / 2 : 0
+  const mapCZ = mapBounds ? (mapBounds.minY + mapBounds.maxY) / 2 : 0
+
+  const rawW = sMaxX - sMinX
+  const rawD = sMaxY - sMinY
+
+  // Determine run axis: stairs run along the longer dimension
+  const isRunAlongX = rawW >= rawD
+
+  // Convert corners to expanded 3D world coords (DXF Y → Three.js Z)
+  const toWorldX = (rx) => mapCX + (rx - mapCX) * SPACE_EXPANSION
+  const toWorldZ = (ry) => mapCZ + (ry - mapCZ) * SPACE_EXPANSION
+
+  const wMinX = toWorldX(sMinX), wMaxX = toWorldX(sMaxX)
+  const wMinZ = toWorldZ(sMinY), wMaxZ = toWorldZ(sMaxY)
+
+  // Determine stair direction using the "up" layer entity (marks the first/bottom step)
+  let bottomEdge  // the world coordinate of the bottom end along the run axis
+  let topEdge     // the world coordinate of the top end along the run axis
+
+  if (upEnts.length > 0) {
+    const u = upEnts[0]
+    const umx = (u.start.x + u.end.x) / 2
+    const umy = (u.start.y + u.end.y) / 2
+
+    if (isRunAlongX) {
+      const upWX = toWorldX(umx)
+      // "up" entity is closer to minX or maxX?
+      if (Math.abs(upWX - wMinX) <= Math.abs(upWX - wMaxX)) {
+        bottomEdge = wMinX; topEdge = wMaxX
+      } else {
+        bottomEdge = wMaxX; topEdge = wMinX
+      }
+    } else {
+      const upWZ = toWorldZ(umy)
+      if (Math.abs(upWZ - wMinZ) <= Math.abs(upWZ - wMaxZ)) {
+        bottomEdge = wMinZ; topEdge = wMaxZ
+      } else {
+        bottomEdge = wMaxZ; topEdge = wMinZ
+      }
+    }
+  } else {
+    // No "up" entity — default: bottom at min, top at max
+    bottomEdge = isRunAlongX ? wMinX : wMinZ
+    topEdge = isRunAlongX ? wMaxX : wMaxZ
+  }
+
+  const runLen = Math.abs(topEdge - bottomEdge)
+  const spanLen = isRunAlongX ? Math.abs(wMaxZ - wMinZ) : Math.abs(wMaxX - wMinX)
+  const spanCenter = isRunAlongX ? (wMinZ + wMaxZ) / 2 : (wMinX + wMaxX) / 2
+
+  if (runLen < 1 || spanLen < 1) return
+
+  const height = wallHeight.value
+  const NUM_STEPS = Math.max(8, Math.min(20, Math.round(runLen / (height * 0.06))))
+  const stepH = height / NUM_STEPS
+  const stepD = runLen / NUM_STEPS
+
+  const group = new THREE.Group()
+  const stepMat = new THREE.MeshStandardMaterial({ color: 0xddd5c8, roughness: 0.7, metalness: 0.05 })
+  const riserMat = new THREE.MeshStandardMaterial({ color: 0xc8bfb2, roughness: 0.8, metalness: 0 })
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.5, metalness: 0.3 })
+
+  // Direction sign: +1 if steps go from bottomEdge toward increasing coord, -1 if decreasing
+  const dir = topEdge > bottomEdge ? 1 : -1
+
+  for (let i = 0; i < NUM_STEPS; i++) {
+    const runPos = bottomEdge + dir * (stepD * i + stepD / 2)
+    const stepY = (i + 1) * stepH
+
+    // Tread (horizontal surface)
+    const treadGeo = isRunAlongX
+      ? new THREE.BoxGeometry(stepD, stepH * 0.15, spanLen)
+      : new THREE.BoxGeometry(spanLen, stepH * 0.15, stepD)
+    const tread = new THREE.Mesh(treadGeo, stepMat)
+    if (isRunAlongX) {
+      tread.position.set(runPos, stepY - stepH * 0.075, spanCenter)
+    } else {
+      tread.position.set(spanCenter, stepY - stepH * 0.075, runPos)
+    }
+    tread.castShadow = true
+    tread.receiveShadow = true
+    group.add(tread)
+
+    // Riser (vertical face)
+    const riserGeo = isRunAlongX
+      ? new THREE.BoxGeometry(stepD * 0.08, stepH * 0.85, spanLen)
+      : new THREE.BoxGeometry(spanLen, stepH * 0.85, stepD * 0.08)
+    const riser = new THREE.Mesh(riserGeo, riserMat)
+    const riserRunPos = bottomEdge + dir * (stepD * i + stepD * 0.04)
+    if (isRunAlongX) {
+      riser.position.set(riserRunPos, i * stepH + stepH * 0.425, spanCenter)
+    } else {
+      riser.position.set(spanCenter, i * stepH + stepH * 0.425, riserRunPos)
+    }
+    riser.castShadow = true
+    group.add(riser)
+  }
+
+  // Side stringers (walls along the stair edges)
+  const stringerThick = Math.max(spanLen * 0.03, 1.5)
+  const runCenter = (bottomEdge + topEdge) / 2
+  for (const side of [-1, 1]) {
+    const sGeo = isRunAlongX
+      ? new THREE.BoxGeometry(runLen, height, stringerThick)
+      : new THREE.BoxGeometry(stringerThick, height, runLen)
+    const sMesh = new THREE.Mesh(sGeo, railMat)
+    if (isRunAlongX) {
+      sMesh.position.set(runCenter, height / 2, spanCenter + side * (spanLen / 2 + stringerThick / 2))
+    } else {
+      sMesh.position.set(spanCenter + side * (spanLen / 2 + stringerThick / 2), height / 2, runCenter)
+    }
+    sMesh.castShadow = true
+    group.add(sMesh)
+  }
+
+  // Railing posts & handrail
+  const railBarThick = Math.max(spanLen * 0.015, 1)
+  for (const side of [-1, 1]) {
+    const sideOffset = spanLen / 2 + stringerThick
+    for (let i = 0; i <= NUM_STEPS; i += 2) {
+      const postH = height * 0.35
+      const postGeo = new THREE.BoxGeometry(railBarThick, postH, railBarThick)
+      const post = new THREE.Mesh(postGeo, railMat)
+      const pStepY = (i + 1) * stepH
+      const pRunPos = bottomEdge + dir * stepD * i
+      if (isRunAlongX) {
+        post.position.set(pRunPos, pStepY + postH / 2, spanCenter + side * sideOffset)
+      } else {
+        post.position.set(spanCenter + side * sideOffset, pStepY + postH / 2, pRunPos)
+      }
+      post.castShadow = true
+      group.add(post)
+    }
+  }
+
+  group.position.y = yOffset
+  group.userData.floorIndex = floorIndex
+  scene.add(group)
+  stairMeshes.push(group)
+
+  stairRamps.push({
+    minX: Math.min(wMinX, wMaxX), maxX: Math.max(wMinX, wMaxX),
+    minZ: Math.min(wMinZ, wMaxZ), maxZ: Math.max(wMinZ, wMaxZ),
+    baseY: yOffset, topY: yOffset + height,
+    runAxis: isRunAlongX ? 'x' : 'z',
+    runStart: bottomEdge,
+    runEnd: topEdge,
+    floorIndex
+  })
+
+  console.log('[3DViewer] Stairs built:', {
+    runAxis: isRunAlongX ? 'X' : 'Z',
+    bottomEdge: bottomEdge.toFixed(1), topEdge: topEdge.toFixed(1),
+    steps: NUM_STEPS, height, spanLen: spanLen.toFixed(1), runLen: runLen.toFixed(1),
+    upEntityFound: upEnts.length > 0
+  })
+}
+
+const getPlayerFloorHeight = (px, pz, currentY) => {
+  const h = wallHeight.value
+
+  // 1) On a staircase → follow the ramp surface so the player smoothly walks
+  //    up or down between floors.
