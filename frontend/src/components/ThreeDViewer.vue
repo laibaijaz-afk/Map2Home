@@ -2251,3 +2251,253 @@ const toggleGrid = () => addGridHelper()
 const toggleFurniture = () => {
   furnitureMeshes.forEach(mesh => mesh.visible = showFurniture.value)
 }
+
+// Show one floor at a time, or all stacked. In walk mode we always show all
+// floors so the player can physically climb the stairs between them.
+const applyFloorView = () => {
+  const sel = visibleFloor.value
+  const showAll = sel === 'all'
+
+  const floorVisible = (idx) => showAll || idx === sel
+
+  // Walls / doors / windows (respect both floor view and layer visibility)
+  const layerVis = {}
+  if (props.floorsData || props.mapData?.layers) {
+    const layers = (getFloorsArray()[0]?.layers) || props.mapData?.layers || []
+    layers.forEach(l => { layerVis[l.id] = l.visible !== false })
+  }
+  wallMeshes.forEach(m => {
+    const f = m.userData.floorIndex ?? 0
+    const lid = m.userData.layerId
+    const layerOk = !(lid && lid in layerVis) || layerVis[lid]
+    m.visible = floorVisible(f) && layerOk
+  })
+
+  // Ground textured floor (floorIndex 0) also honours the Floor checkbox
+  if (floorMesh) floorMesh.visible = showFloor.value && floorVisible(0)
+
+  // Upper floor slabs
+  extraFloorCeilingMeshes.forEach(m => {
+    const f = m.userData.floorIndex ?? 0
+    m.visible = showFloor.value && floorVisible(f)
+  })
+
+  // Stairs visible with either the floor they start on or the one they reach
+  stairMeshes.forEach(m => {
+    const f = m.userData.floorIndex ?? 0
+    m.visible = showAll || sel === f || sel === f + 1
+  })
+
+  // Labels
+  labelMeshes.forEach(m => {
+    const f = m.userData.floorIndex ?? 0
+    m.visible = floorVisible(f)
+  })
+}
+
+const setVisibleFloor = (which) => {
+  visibleFloor.value = which
+  applyFloorView()
+
+  if (which === 'all' || !expandedBounds) return
+
+  const h = wallHeight.value
+  const centerX = (expandedBounds.minX + expandedBounds.maxX) / 2
+  const centerZ = (expandedBounds.minY + expandedBounds.maxY) / 2
+  const floorY = which * h
+
+  if (isWalkMode.value) {
+    // Walk mode: drop the player directly onto the chosen floor. This is a
+    // guaranteed way onto an upper floor even if a plan's stairs are imperfect.
+    committedFloor = which
+    currentFloorRef.value = which
+    camera.position.set(centerX, floorY + playerHeight, centerZ)
+    velocity.y = 0
+    canJump = true
+  } else {
+    // Orbit mode: frame the chosen floor nicely
+    const size = Math.max(expandedBounds.maxX - expandedBounds.minX, expandedBounds.maxY - expandedBounds.minY)
+    camera.position.set(centerX + size * 0.5, floorY + size * 0.45, centerZ + size * 0.5)
+    if (orbitControls) {
+      orbitControls.target.set(centerX, floorY + h / 3, centerZ)
+      orbitControls.update()
+    }
+  }
+}
+
+// Keyboard handlers
+const onKeyDown = (event) => {
+  if (!isWalkMode.value || !isPointerLocked.value) return
+  
+  switch (event.code) {
+    case 'KeyW': case 'ArrowUp': moveState.forward = true; break
+    case 'KeyS': case 'ArrowDown': moveState.backward = true; break
+    case 'KeyA': case 'ArrowLeft': moveState.left = true; break
+    case 'KeyD': case 'ArrowRight': moveState.right = true; break
+    case 'Space':
+      if (canJump) {
+        velocity.y += 350
+        canJump = false
+      }
+      break
+    case 'ShiftLeft': case 'ShiftRight': moveState.sprint = true; break
+  }
+}
+
+const onKeyUp = (event) => {
+  switch (event.code) {
+    case 'KeyW': case 'ArrowUp': moveState.forward = false; break
+    case 'KeyS': case 'ArrowDown': moveState.backward = false; break
+    case 'KeyA': case 'ArrowLeft': moveState.left = false; break
+    case 'KeyD': case 'ArrowRight': moveState.right = false; break
+    case 'ShiftLeft': case 'ShiftRight': moveState.sprint = false; break
+  }
+}
+
+// Lifecycle
+onMounted(async () => {
+  console.log('[3DViewer] Component mounted')
+  
+  await nextTick()
+  
+  setTimeout(async () => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      if (initThree()) {
+        buildModel()
+        if (expandedBounds) centerCamera(expandedBounds)
+        animate()
+        loading.value = false
+      } else {
+        error.value = error.value || 'Failed to initialize 3D renderer'
+        loading.value = false
+      }
+    } catch (err) {
+      console.error('[3DViewer] Error:', err)
+      error.value = err.message
+      loading.value = false
+    }
+  }, 200)
+
+  window.addEventListener('resize', handleResize)
+  document.addEventListener('keydown', onKeyDown)
+  document.addEventListener('keyup', onKeyUp)
+  document.addEventListener('fullscreenchange', onFullscreenChange)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  document.removeEventListener('keydown', onKeyDown)
+  document.removeEventListener('keyup', onKeyUp)
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
+  
+  if (animationFrameId) cancelAnimationFrame(animationFrameId)
+  
+  clearMeshes()
+  
+  if (gridHelper) scene?.remove(gridHelper)
+  if (orbitControls) orbitControls.dispose()
+  if (pointerControls) pointerControls.dispose()
+  if (renderer) renderer.dispose()
+  if (miniMapRenderer) miniMapRenderer.dispose()
+
+  if (_wallTexCache) { _wallTexCache.dispose(); _wallTexCache = null }
+  if (_doorTexCache) { _doorTexCache.dispose(); _doorTexCache = null }
+
+  scene = null
+  camera = null
+  renderer = null
+})
+
+// Layer visibility is folded into applyFloorView (handles floors + layers + stairs)
+const syncLayerVisibility = () => { applyFloorView() }
+
+let prevEntityCount = 0
+let prevMapDataRef = null
+watch(() => props.mapData, (newData) => {
+  if (!newData || !scene) return
+  // When stacking multiple floors, floorsData drives the build, not mapData
+  if ((props.floorsData || []).filter(Boolean).length > 1) return
+  const entityCount = newData.entities?.length ?? 0
+  const mapSwapped = newData !== prevMapDataRef
+  if (mapSwapped || entityCount !== prevEntityCount) {
+    prevMapDataRef = newData
+    prevEntityCount = entityCount
+    buildModel()
+  } else {
+    syncLayerVisibility()
+  }
+}, { deep: true })
+
+// Rebuild when the set of floors changes (count or identity)
+watch(() => (props.floorsData || []).filter(Boolean).length, (n, prev) => {
+  if (!scene) return
+  if (n !== prev) buildModel()
+})
+
+// Re-center only when switching to a different map (title change), not when rebuilding floors or editing entities
+watch(() => props.mapTitle, (t, prev) => {
+  if (!scene || !expandedBounds) return
+  if (prev !== undefined && prev !== '' && t !== prev) {
+    centerCamera(expandedBounds)
+  }
+})
+</script>
+
+<style scoped>
+.three-d-viewer {
+  width: 100%;
+}
+
+.three-d-viewer:fullscreen {
+  background: white;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.three-d-viewer:fullscreen > div {
+  height: 100vh;
+  border-radius: 0;
+  border: none;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.fullscreen-canvas {
+  height: calc(100vh - 160px) !important;
+  border-radius: 8px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: #d1d5db;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4f46e5;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4f46e5;
+  cursor: pointer;
+  border: none;
+}
+
+select {
+  background: white;
+}
+</style>
