@@ -12,3 +12,16 @@ export const syncFloorPlanTo3D = async ({ mapData, token, revision, source = 'st
       Authorization: `Bearer ${token}`
     },
     body: JSON.stringify({
+      mapData,
+      revision,
+      source
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data?.success) {
+    throw new Error(data?.message || `3D sync failed (${response.status})`);
+  }
+
+  return data;
+};
