@@ -750,3 +750,253 @@ const buildModel = () => {
   })
 
   // Roof ceiling above the top floor
+  createCeiling(mapBounds)
+  if (ceilingMesh) ceilingMesh.position.y = floors.length * h
+
+  stats.value = { wallCount, vertexCount }
+
+  addGridHelper()
+  updateMiniMapCamera()
+
+  rooms.value = detectRooms(floors[0].entities)
+  builtFloorCount = floors.length
+  floorCountRef.value = floors.length
+
+  // Apply current floor-view filter (and clamp if floor count shrank)
+  if (visibleFloor.value !== 'all' && visibleFloor.value >= floors.length) {
+    visibleFloor.value = 'all'
+  }
+  applyFloorView()
+
+  console.log('[3DViewer] Built', floors.length, 'floor(s),', wallCount, 'walls,', rooms.value.length, 'rooms')
+  console.log('[3DViewer] wallHeight =', wallHeight.value, '| stairRamps =', stairRamps.length)
+  stairRamps.forEach((r, i) => {
+    console.log(`[3DViewer] ramp#${i} floor=${r.floorIndex} baseY=${r.baseY.toFixed(1)} topY=${r.topY.toFixed(1)} axis=${r.runAxis} run=${r.runStart.toFixed(0)}→${r.runEnd.toFixed(0)} foot=[${r.minX.toFixed(0)},${r.minZ.toFixed(0)}]..[${r.maxX.toFixed(0)},${r.maxZ.toFixed(0)}]`)
+  })
+  if (stairRamps.length === 0 && floors.length > 1) {
+    console.warn('[3DViewer] NO STAIRS BUILT — the ground floor has no "stairs" layer, so the player cannot climb. Use the floor buttons to jump between floors.')
+  }
+}
+
+// Create textured floor
+const createFloor = (bounds) => {
+  const SPACE_EXPANSION = 6.0
+  // Size to the wall span exactly (walls occupy bounds × SPACE_EXPANSION around
+  // the centre) so the slab fits inside the boundary walls, not past them.
+  const width = (bounds.maxX - bounds.minX) * SPACE_EXPANSION
+  const depth = (bounds.maxY - bounds.minY) * SPACE_EXPANSION
+  const centerX = (bounds.minX + bounds.maxX) / 2
+  const centerZ = (bounds.minY + bounds.maxY) / 2
+
+  const S = 1024
+  const floorCanvas = document.createElement('canvas')
+  floorCanvas.width = S
+  floorCanvas.height = S
+  const ctx = floorCanvas.getContext('2d')
+  
+  // Warm oak base
+  ctx.fillStyle = '#c8a26e'
+  ctx.fillRect(0, 0, S, S)
+
+  const plankH = S / 10
+  const plankColors = ['#c49a6c', '#d4a574', '#b8935c', '#cfa870', '#bfa068', '#d0aa78']
+
+  for (let row = 0; row < 10; row++) {
+    const y = row * plankH
+    // Staggered plank joints
+    const offset = (row % 2 === 0) ? 0 : S * 0.4
+    let x = -offset
+
+    while (x < S) {
+      const pw = S * 0.35 + Math.random() * S * 0.3
+      const baseColor = plankColors[Math.floor(Math.random() * plankColors.length)]
+      ctx.fillStyle = baseColor
+      ctx.fillRect(x, y + 1, pw - 2, plankH - 2)
+
+      // Wood grain lines within each plank
+      ctx.save()
+    ctx.beginPath()
+      ctx.rect(x, y + 1, pw - 2, plankH - 2)
+      ctx.clip()
+      const grainCount = 8 + Math.floor(Math.random() * 6)
+      for (let g = 0; g < grainCount; g++) {
+        const gy = y + 2 + (g / grainCount) * (plankH - 4)
+        ctx.strokeStyle = `rgba(120, 80, 40, ${0.06 + Math.random() * 0.08})`
+        ctx.lineWidth = 0.5 + Math.random() * 1
+        ctx.beginPath()
+        ctx.moveTo(x, gy)
+        // Slight wave for natural grain
+        const wave = Math.random() * 3
+        for (let gx = x; gx < x + pw; gx += 8) {
+          ctx.lineTo(gx, gy + Math.sin(gx * 0.02 + row) * wave)
+        }
+    ctx.stroke()
+      }
+
+      // Occasional knot
+      if (Math.random() < 0.15) {
+        const kx = x + pw * 0.3 + Math.random() * pw * 0.4
+        const ky = y + plankH * 0.3 + Math.random() * plankH * 0.4
+        const kr = 3 + Math.random() * 5
+        const kGrad = ctx.createRadialGradient(kx, ky, 0, kx, ky, kr)
+        kGrad.addColorStop(0, 'rgba(90, 55, 25, 0.5)')
+        kGrad.addColorStop(0.6, 'rgba(110, 70, 35, 0.25)')
+        kGrad.addColorStop(1, 'rgba(140, 90, 50, 0)')
+        ctx.fillStyle = kGrad
+        ctx.beginPath()
+        ctx.ellipse(kx, ky, kr, kr * 0.7, Math.random() * Math.PI, 0, Math.PI * 2)
+        ctx.fill()
+      }
+
+      // Subtle shade variation per plank
+      ctx.fillStyle = `rgba(${Math.random() > 0.5 ? '0,0,0' : '255,255,255'}, ${0.02 + Math.random() * 0.03})`
+      ctx.fillRect(x, y + 1, pw - 2, plankH - 2)
+
+      ctx.restore()
+      x += pw
+    }
+
+    // Horizontal gap between rows
+    ctx.fillStyle = 'rgba(60, 35, 15, 0.35)'
+    ctx.fillRect(0, y, S, 1.5)
+  }
+
+  // Vertical joint lines (drawn per-row to get stagger)
+  ctx.strokeStyle = 'rgba(60, 35, 15, 0.3)'
+  ctx.lineWidth = 1
+  for (let row = 0; row < 10; row++) {
+    const y = row * plankH
+    const offset = (row % 2 === 0) ? 0 : S * 0.4
+    let x = -offset
+    while (x < S) {
+      const pw = S * 0.35 + Math.random() * S * 0.3
+      if (x > 0) {
+        ctx.beginPath()
+        ctx.moveTo(x, y)
+        ctx.lineTo(x, y + plankH)
+        ctx.stroke()
+      }
+      x += pw
+    }
+  }
+  
+  const floorTexture = new THREE.CanvasTexture(floorCanvas)
+  floorTexture.wrapS = THREE.RepeatWrapping
+  floorTexture.wrapT = THREE.RepeatWrapping
+  floorTexture.repeat.set(width / 600, depth / 600)
+  floorTexture.anisotropy = 4
+
+  // Normal map for subtle depth (bump illusion)
+  const bumpCanvas = document.createElement('canvas')
+  bumpCanvas.width = S
+  bumpCanvas.height = S
+  const bCtx = bumpCanvas.getContext('2d')
+  bCtx.fillStyle = '#808080'
+  bCtx.fillRect(0, 0, S, S)
+  for (let row = 0; row < 10; row++) {
+    const y = row * plankH
+    bCtx.fillStyle = '#606060'
+    bCtx.fillRect(0, y, S, 1.5)
+  }
+  const bumpTex = new THREE.CanvasTexture(bumpCanvas)
+  bumpTex.wrapS = THREE.RepeatWrapping
+  bumpTex.wrapT = THREE.RepeatWrapping
+  bumpTex.repeat.set(width / 600, depth / 600)
+
+  const geometry = new THREE.PlaneGeometry(width, depth)
+  const material = new THREE.MeshStandardMaterial({
+    map: floorTexture,
+    bumpMap: bumpTex,
+    bumpScale: 0.8,
+    side: THREE.DoubleSide,
+    roughness: 0.65,
+    metalness: 0.05
+  })
+
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.rotation.x = -Math.PI / 2
+  mesh.position.set(centerX, 0, centerZ)
+  mesh.receiveShadow = true
+  mesh.visible = showFloor.value
+
+  floorMesh = mesh
+  floorMesh.userData.floorIndex = 0
+  scene.add(mesh)
+}
+
+// Compute the world-space footprint rectangle of the staircase from a floor's
+// entities (used to punch a stairwell hole in the floor slab above it).
+const getStairFootprintWorld = (entities) => {
+  if (!entities || !mapBounds) return null
+  const SPACE_EXPANSION = 6.0
+  const stairEnts = entities.filter(e => e.type === 'line' &&
+    (e.layerId === 'stairs' || e.layerId === 'stair-up' || e.layerId === 'stair-down') &&
+    e.start && e.end)
+  if (!stairEnts.length) return null
+
+  let sMinX = Infinity, sMinY = Infinity, sMaxX = -Infinity, sMaxY = -Infinity
+  for (const e of stairEnts) {
+    sMinX = Math.min(sMinX, e.start.x, e.end.x)
+    sMinY = Math.min(sMinY, e.start.y, e.end.y)
+    sMaxX = Math.max(sMaxX, e.start.x, e.end.x)
+    sMaxY = Math.max(sMaxY, e.start.y, e.end.y)
+  }
+  if (!isFinite(sMinX)) return null
+
+  const mapCX = (mapBounds.minX + mapBounds.maxX) / 2
+  const mapCZ = (mapBounds.minY + mapBounds.maxY) / 2
+  const toWorldX = (rx) => mapCX + (rx - mapCX) * SPACE_EXPANSION
+  const toWorldZ = (ry) => mapCZ + (ry - mapCZ) * SPACE_EXPANSION
+
+  // Slightly enlarge the opening so the player can comfortably emerge
+  const pad = 0.05
+  const wMinX = toWorldX(sMinX), wMaxX = toWorldX(sMaxX)
+  const wMinZ = toWorldZ(sMinY), wMaxZ = toWorldZ(sMaxY)
+  const ex = (wMaxX - wMinX) * pad
+  const ez = (wMaxZ - wMinZ) * pad
+  return {
+    minX: Math.min(wMinX, wMaxX) - ex, maxX: Math.max(wMinX, wMaxX) + ex,
+    minZ: Math.min(wMinZ, wMaxZ) - ez, maxZ: Math.max(wMinZ, wMaxZ) + ez
+  }
+}
+
+const createFloorPlane = (bounds, yOffset, floorIndex = 0, holes = []) => {
+  const SPACE_EXPANSION = 6.0
+  // Size to the wall span exactly (walls occupy bounds × SPACE_EXPANSION around
+  // the centre) so the slab fits inside the boundary walls, not past them.
+  const width = (bounds.maxX - bounds.minX) * SPACE_EXPANSION
+  const depth = (bounds.maxY - bounds.minY) * SPACE_EXPANSION
+  const centerX = (bounds.minX + bounds.maxX) / 2
+  const centerZ = (bounds.minY + bounds.maxY) / 2
+
+  let geometry
+  if (holes && holes.length > 0) {
+    // Build a rectangular slab in local (x,y) space with rectangular holes.
+    // After rotation.x = -90°, local (x,y) maps to world (centerX + x, yOffset, centerZ - y).
+    const shape = new THREE.Shape()
+    shape.moveTo(-width / 2, -depth / 2)
+    shape.lineTo(width / 2, -depth / 2)
+    shape.lineTo(width / 2, depth / 2)
+    shape.lineTo(-width / 2, depth / 2)
+    shape.lineTo(-width / 2, -depth / 2)
+
+    holes.forEach(hr => {
+      // World rect → local coords: lx = worldX - centerX, ly = centerZ - worldZ
+      const lxA = hr.minX - centerX, lxB = hr.maxX - centerX
+      const lyA = centerZ - hr.minZ, lyB = centerZ - hr.maxZ
+      const x0 = Math.min(lxA, lxB), x1 = Math.max(lxA, lxB)
+      const y0 = Math.min(lyA, lyB), y1 = Math.max(lyA, lyB)
+      const hole = new THREE.Path()
+      hole.moveTo(x0, y0)
+      hole.lineTo(x1, y0)
+      hole.lineTo(x1, y1)
+      hole.lineTo(x0, y1)
+      hole.lineTo(x0, y0)
+      shape.holes.push(hole)
+    })
+    geometry = new THREE.ShapeGeometry(shape)
+  } else {
+    geometry = new THREE.PlaneGeometry(width, depth)
+  }
+
+  const material = new THREE.MeshStandardMaterial({
