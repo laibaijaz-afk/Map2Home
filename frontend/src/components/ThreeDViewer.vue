@@ -2001,3 +2001,253 @@ const setMode = (mode) => {
     if (expandedBounds) centerCamera(expandedBounds)
   }
 }
+
+// View presets
+const setView = (view) => {
+  if (!camera || !expandedBounds) return
+
+  const centerX = (expandedBounds.minX + expandedBounds.maxX) / 2
+  const centerZ = (expandedBounds.minY + expandedBounds.maxY) / 2
+  const size = Math.max(expandedBounds.maxX - expandedBounds.minX, expandedBounds.maxY - expandedBounds.minY)
+
+  currentView.value = view
+  setMode('orbit')
+
+  switch (view) {
+    case 'top':
+      camera.position.set(centerX, size * 1.2, centerZ + 1)
+      break
+    case 'front':
+      camera.position.set(centerX, size * 0.3, centerZ + size)
+      break
+    case 'perspective':
+    default:
+      camera.position.set(centerX + size * 0.6, size * 0.5, centerZ + size * 0.6)
+      break
+  }
+
+  if (orbitControls) {
+    orbitControls.target.set(centerX, wallHeight.value / 4, centerZ)
+    orbitControls.update()
+  }
+}
+
+const resetView = () => setView('perspective')
+
+const toggleFullscreen = () => {
+  const el = containerRef.value?.closest('.three-d-viewer')
+  if (!el) return
+  if (!document.fullscreenElement) {
+    el.requestFullscreen().catch(() => {})
+  } else {
+    document.exitFullscreen().catch(() => {})
+  }
+}
+
+const onFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement
+  // Browser needs multiple frames to finalize fullscreen layout.
+  // Resize at staggered intervals to catch the final dimensions.
+  const resizeRenderer = () => {
+    if (!renderer || !containerRef.value || !camera) return
+    const w = containerRef.value.clientWidth
+    const h = containerRef.value.clientHeight
+    if (w > 0 && h > 0) {
+      camera.aspect = w / h
+      camera.updateProjectionMatrix()
+      renderer.setSize(w, h)
+    }
+  }
+  setTimeout(resizeRenderer, 50)
+  setTimeout(resizeRenderer, 200)
+  setTimeout(resizeRenderer, 500)
+}
+
+// Detect rooms from map data (based on labels/layer names)
+const detectRooms = (entitiesArg) => {
+  const entities = entitiesArg || props.mapData?.entities
+  if (!entities) return []
+
+  const detectedRooms = []
+  const roomNames = new Set()
+
+  // Look for text labels that might indicate rooms
+  entities.forEach(entity => {
+    if (entity.type === 'text' && entity.text) {
+      const text = entity.text.toLowerCase()
+      // Common room names
+      const roomKeywords = ['bedroom', 'bathroom', 'kitchen', 'living', 'dining', 'garage', 'store', 'lounge', 'hall', 'entrance', 'balcony', 'terrace', 'drawing', 'servant', 'porch', 'lobby', 'corridor']
+      
+      for (const keyword of roomKeywords) {
+        if (text.includes(keyword) && !roomNames.has(text)) {
+          roomNames.add(text)
+          detectedRooms.push({
+            id: `room-${detectedRooms.length}`,
+            name: entity.text.slice(0, 15),
+            position: entity.position || entity.center || { x: entity.x, y: entity.y }
+          })
+          break
+        }
+      }
+    }
+  })
+  
+  // If no labeled rooms found, create navigation points based on map quadrants
+  if (detectedRooms.length === 0 && expandedBounds) {
+    const cx = (expandedBounds.minX + expandedBounds.maxX) / 2
+    const cy = (expandedBounds.minY + expandedBounds.maxY) / 2
+    const qw = (expandedBounds.maxX - expandedBounds.minX) / 4
+    const qh = (expandedBounds.maxY - expandedBounds.minY) / 4
+    
+    detectedRooms.push(
+      { id: 'area-nw', name: 'Area NW', position: { x: cx - qw, y: cy + qh } },
+      { id: 'area-ne', name: 'Area NE', position: { x: cx + qw, y: cy + qh } },
+      { id: 'area-sw', name: 'Area SW', position: { x: cx - qw, y: cy - qh } },
+      { id: 'area-se', name: 'Area SE', position: { x: cx + qw, y: cy - qh } }
+    )
+  }
+  
+  return detectedRooms
+}
+
+// Teleport camera to a specific room
+const teleportToRoom = (room) => {
+  if (!camera || !room.position) return
+  
+  const x = room.position.x
+  const z = room.position.y // Y in 2D becomes Z in 3D
+  
+  if (isWalkMode.value) {
+    camera.position.set(x, playerHeight, z)
+    console.log('[3DViewer] Teleported to room:', room.name, 'at', x, z)
+  } else {
+    const size = expandedBounds ? Math.max(expandedBounds.maxX - expandedBounds.minX, expandedBounds.maxY - expandedBounds.minY) * 0.3 : 500
+    camera.position.set(x + size * 0.3, size * 0.4, z + size * 0.3)
+    if (orbitControls) {
+      orbitControls.target.set(x, wallHeight.value / 4, z)
+      orbitControls.update()
+    }
+  }
+}
+
+// Teleport to preset positions
+const teleportToPosition = (preset) => {
+  if (!camera || !expandedBounds) return
+  
+  const cx = (expandedBounds.minX + expandedBounds.maxX) / 2
+  const cz = (expandedBounds.minY + expandedBounds.maxY) / 2
+  const size = Math.max(expandedBounds.maxX - expandedBounds.minX, expandedBounds.maxY - expandedBounds.minY)
+  
+  let targetX = cx, targetZ = cz
+  
+  switch (preset) {
+    case 'center':
+      targetX = cx
+      targetZ = cz
+      break
+    case 'entrance':
+      targetX = cx
+      targetZ = expandedBounds.maxY - size * 0.1
+      break
+    case 'corner1':
+      targetX = expandedBounds.minX + size * 0.15
+      targetZ = expandedBounds.minY + size * 0.15
+      break
+    case 'corner2':
+      targetX = expandedBounds.maxX - size * 0.15
+      targetZ = expandedBounds.maxY - size * 0.15
+      break
+  }
+  
+  if (isWalkMode.value) {
+    camera.position.set(targetX, playerHeight, targetZ)
+  } else {
+    camera.position.set(targetX + size * 0.3, size * 0.4, targetZ + size * 0.3)
+    if (orbitControls) {
+      orbitControls.target.set(targetX, wallHeight.value / 4, targetZ)
+      orbitControls.update()
+    }
+  }
+  
+  console.log('[3DViewer] Teleported to', preset, 'at', targetX, targetZ)
+}
+
+// Click on mini-map to teleport
+const onMiniMapClick = (event) => {
+  if (!expandedBounds || !camera) return
+  
+  const rect = event.currentTarget.getBoundingClientRect()
+  const x = (event.clientX - rect.left) / rect.width
+  const y = (event.clientY - rect.top) / rect.height
+  
+  const cx = (expandedBounds.minX + expandedBounds.maxX) / 2
+  const cz = (expandedBounds.minY + expandedBounds.maxY) / 2
+  const sizeX = (expandedBounds.maxX - expandedBounds.minX) * 0.6
+  const sizeZ = (expandedBounds.maxY - expandedBounds.minY) * 0.6
+  const halfSpan = Math.max(sizeX, sizeZ)
+  
+  const worldX = (cx - halfSpan) + 2 * halfSpan * x
+  const worldZ = (cz - halfSpan) + 2 * halfSpan * y
+  
+  if (isWalkMode.value) {
+    camera.position.set(worldX, playerHeight, worldZ)
+  } else {
+    const size = 2 * halfSpan
+    camera.position.set(worldX + size * 0.2, size * 0.3, worldZ + size * 0.2)
+    if (orbitControls) {
+      orbitControls.target.set(worldX, wallHeight.value / 4, worldZ)
+      orbitControls.update()
+    }
+  }
+  
+  console.log('[3DViewer] Mini-map teleport to', worldX.toFixed(0), worldZ.toFixed(0))
+}
+
+const updateWallHeight = () => {
+  if (!wallMeshes || wallMeshes.length === 0) return
+
+  // Multi-floor: wall height affects every floor's vertical offset, slab holes
+  // and stairs — simplest correct approach is a full rebuild.
+  if (builtFloorCount > 1) {
+    buildModel()
+    return
+  }
+
+  const originalHeight = wallMeshes[0]?.userData?.originalHeight || 120
+  const scale = wallHeight.value / originalHeight
+
+  wallMeshes.forEach(wall => {
+    wall.scale.y = scale
+    wall.position.y = 0
+  })
+
+  if (ceilingMesh) {
+    ceilingMesh.position.y = wallHeight.value
+  }
+  playerHeight = wallHeight.value * 0.38
+
+  const disposeGroup = (obj) => {
+    scene.remove(obj)
+    obj.traverse(child => {
+      if (child.isMesh) {
+        child.geometry.dispose()
+        if (child.material.map) child.material.map.dispose()
+        child.material.dispose()
+      }
+    })
+  }
+  stairMeshes.forEach(disposeGroup)
+  stairMeshes = []
+  stairRamps = []
+
+  if (props.mapData?.entities) {
+    buildStairs(props.mapData.entities, 0)
+  }
+}
+
+const toggleFloor = () => { applyFloorView() }
+const toggleCeiling = () => { if (ceilingMesh) ceilingMesh.visible = showCeiling.value }
+const toggleGrid = () => addGridHelper()
+const toggleFurniture = () => {
+  furnitureMeshes.forEach(mesh => mesh.visible = showFurniture.value)
+}
