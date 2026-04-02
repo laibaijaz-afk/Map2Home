@@ -1751,3 +1751,253 @@ const updateMiniMapCamera = () => {
 const clearMeshes = () => {
   builtFloorCount = 1
   wallMeshes.forEach(obj => {
+    scene.remove(obj)
+    obj.traverse(child => {
+      if (child.isMesh) {
+        child.geometry.dispose()
+        if (child.material.map) child.material.map.dispose()
+        child.material.dispose()
+      }
+    })
+  })
+  wallMeshes = []
+
+  furnitureMeshes.forEach(mesh => {
+    scene.remove(mesh)
+    mesh.geometry.dispose()
+    mesh.material.dispose()
+  })
+  furnitureMeshes = []
+
+  labelMeshes.forEach(mesh => {
+    scene.remove(mesh)
+    mesh.geometry.dispose()
+    if (mesh.material.map) mesh.material.map.dispose()
+    mesh.material.dispose()
+  })
+  labelMeshes = []
+
+  if (floorMesh) {
+    scene.remove(floorMesh)
+    floorMesh.geometry.dispose()
+    if (floorMesh.material.map) floorMesh.material.map.dispose()
+    floorMesh.material.dispose()
+    floorMesh = null
+  }
+
+  if (ceilingMesh) {
+    scene.remove(ceilingMesh)
+    ceilingMesh.geometry.dispose()
+    ceilingMesh.material.dispose()
+    ceilingMesh = null
+  }
+
+  const disposeGroup = (obj) => {
+    scene.remove(obj)
+    obj.traverse(child => {
+      if (child.isMesh) {
+        child.geometry.dispose()
+        if (child.material.map) child.material.map.dispose()
+        child.material.dispose()
+      }
+    })
+  }
+
+  stairMeshes.forEach(disposeGroup)
+  stairMeshes = []
+  stairRamps = []
+
+  extraFloorCeilingMeshes.forEach(m => {
+    scene.remove(m)
+    m.geometry.dispose()
+    if (m.material.map) m.material.map.dispose()
+    m.material.dispose()
+  })
+  extraFloorCeilingMeshes = []
+}
+
+// Animation loop
+const animate = () => {
+  animationFrameId = requestAnimationFrame(animate)
+  
+  const delta = clock ? clock.getDelta() : 0.016
+  
+  // Handle walk mode movement - gravity + floor-bound walking
+  if (isWalkMode.value && isPointerLocked.value) {
+    // Apply friction for horizontal movement
+    velocity.x -= velocity.x * 10.0 * delta
+    velocity.z -= velocity.z * 10.0 * delta
+    
+    // Gravity - stronger pull for grounded feeling when jumping
+    const GRAVITY = 9.8 * 220
+    velocity.y -= GRAVITY * delta
+
+    // Get movement direction - FLATTENED to horizontal plane (XZ only) so WASD never makes you fly
+    tempForward.set(0, 0, -1).applyQuaternion(camera.quaternion)
+    tempRight.set(1, 0, 0).applyQuaternion(camera.quaternion)
+    tempForward.y = 0
+    tempRight.y = 0
+    tempForward.normalize()
+    tempRight.normalize()
+
+    direction.set(0, 0, 0)
+    if (moveState.forward) direction.add(tempForward)
+    if (moveState.backward) direction.sub(tempForward)
+    if (moveState.right) direction.add(tempRight)
+    if (moveState.left) direction.sub(tempRight)
+    if (direction.lengthSq() > 0) direction.normalize()
+
+    const speed = moveState.sprint ? walkSpeed.value * 2 : walkSpeed.value
+
+    // Apply horizontal movement with wall collision - can't pass through walls
+    if (direction.lengthSq() > 0) {
+      const moveDist = speed * delta
+      const newX = camera.position.x + direction.x * moveDist
+      const newZ = camera.position.z + direction.z * moveDist
+      if (!checkWallCollision(newX, newZ)) {
+        camera.position.x = newX
+        camera.position.z = newZ
+      } else {
+        // Try sliding - move only in X or only in Z if one direction is clear
+        if (!checkWallCollision(newX, camera.position.z)) {
+          camera.position.x = newX
+        }
+        if (!checkWallCollision(camera.position.x, newZ)) {
+          camera.position.z = newZ
+        }
+      }
+    }
+
+    // Apply vertical velocity (jumping only)
+    camera.position.y += velocity.y * delta
+
+    // Dynamic floor height — stairs raise the ground under the player
+    const floorY = getPlayerFloorHeight(camera.position.x, camera.position.z, camera.position.y)
+    const groundLevel = floorY + playerHeight
+
+    if (camera.position.y <= groundLevel) {
+      velocity.y = 0
+      camera.position.y = groundLevel
+      canJump = true
+    }
+
+    // Auto-step between floors + toggle the visible floor as the player climbs
+    // or descends the stairs (also keeps the on-screen floor indicator in sync)
+    handleStairAutoStep()
+  } else if (orbitControls) {
+    orbitControls.update()
+  }
+  
+  // Render main scene
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera)
+  }
+  
+  // Render mini map (top-down 2D view) and update position dot
+  if (miniMapRenderer && miniMapCamera && scene && showMiniMap.value) {
+    const savedBg = scene.background
+    const savedCeiling = ceilingMesh ? ceilingMesh.visible : false
+    const savedFloor = floorMesh ? floorMesh.visible : false
+    const savedGrid = gridHelper ? gridHelper.visible : false
+
+    scene.background = new THREE.Color(0xffffff)
+    if (ceilingMesh) ceilingMesh.visible = false
+    if (floorMesh) floorMesh.visible = false
+    if (gridHelper) gridHelper.visible = false
+    furnitureMeshes.forEach(m => { m._savedVis = m.visible; m.visible = false })
+    labelMeshes.forEach(m => { m._savedVis = m.visible; m.visible = false })
+    stairMeshes.forEach(m => { m._savedVis = m.visible; m.visible = false })
+    extraFloorCeilingMeshes.forEach(m => { m._savedVis = m.visible; m.visible = false })
+
+    const savedWallMats = []
+    wallMeshes.forEach(w => {
+      const mats = []
+      w.traverse(child => {
+        if (child.isMesh) {
+          mats.push(child.material)
+          child.material = miniMapOverrideMat
+        }
+      })
+      savedWallMats.push(mats)
+    })
+
+    miniMapRenderer.render(scene, miniMapCamera)
+
+    wallMeshes.forEach((w, gi) => {
+      let mi = 0
+      w.traverse(child => {
+        if (child.isMesh) { child.material = savedWallMats[gi][mi++] }
+      })
+    })
+    scene.background = savedBg
+    if (ceilingMesh) ceilingMesh.visible = savedCeiling
+    if (floorMesh) floorMesh.visible = savedFloor
+    if (gridHelper) gridHelper.visible = savedGrid
+    furnitureMeshes.forEach(m => { m.visible = m._savedVis ?? true })
+    labelMeshes.forEach(m => { m.visible = m._savedVis ?? true })
+    stairMeshes.forEach(m => { m.visible = m._savedVis ?? true })
+    extraFloorCeilingMeshes.forEach(m => { m.visible = m._savedVis ?? true })
+
+    if (camera && expandedBounds) {
+      const cx = (expandedBounds.minX + expandedBounds.maxX) / 2
+      const cz = (expandedBounds.minY + expandedBounds.maxY) / 2
+      const sizeX = (expandedBounds.maxX - expandedBounds.minX) * 0.6
+      const sizeZ = (expandedBounds.maxY - expandedBounds.minY) * 0.6
+      const halfSpan = Math.max(sizeX, sizeZ)
+      if (halfSpan > 0) {
+        const fracX = (camera.position.x - (cx - halfSpan)) / (2 * halfSpan)
+        const fracY = (camera.position.z - (cz - halfSpan)) / (2 * halfSpan)
+        miniMapDotX.value = Math.max(2, Math.min(98, fracX * 100))
+        miniMapDotY.value = Math.max(2, Math.min(98, fracY * 100))
+      }
+    }
+  }
+}
+
+// Handle window resize
+const handleResize = () => {
+  if (!containerRef.value || !camera || !renderer) return
+
+  const width = containerRef.value.clientWidth
+  const height = containerRef.value.clientHeight
+
+  camera.aspect = width / height
+  camera.updateProjectionMatrix()
+  renderer.setSize(width, height)
+}
+
+// Handle canvas click for pointer lock
+const onCanvasClick = () => {
+  if (isWalkMode.value && pointerControls && !isPointerLocked.value) {
+    pointerControls.lock()
+  }
+}
+
+// Set mode (orbit or walk)
+const setMode = (mode) => {
+  isWalkMode.value = mode === 'walk'
+
+  if (isWalkMode.value) {
+    // Switch to walk mode — start on the ground floor and show only that floor.
+    // As the player climbs the stairs the view toggles to the floor they reach.
+    if (orbitControls) orbitControls.enabled = false
+    committedFloor = 0
+    visibleFloor.value = 0
+    currentFloorRef.value = 0
+    applyFloorView()
+    if (expandedBounds) {
+      const centerX = (expandedBounds.minX + expandedBounds.maxX) / 2
+      const centerZ = (expandedBounds.minY + expandedBounds.maxY) / 2
+      // Always start on the ground floor (y = playerHeight)
+      camera.position.set(centerX, playerHeight, centerZ)
+    }
+  } else {
+    // Switch to orbit mode — restore the selected single/all floor view
+    if (pointerControls && isPointerLocked.value) {
+      pointerControls.unlock()
+    }
+    if (orbitControls) orbitControls.enabled = true
+    applyFloorView()
+    if (expandedBounds) centerCamera(expandedBounds)
+  }
+}
