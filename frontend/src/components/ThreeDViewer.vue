@@ -1250,3 +1250,254 @@ const getPlayerFloorHeight = (px, pz, currentY) => {
 
   // 1) On a staircase → follow the ramp surface so the player smoothly walks
   //    up or down between floors.
+  let onRamp = false
+  let rampY = 0
+  for (const ramp of stairRamps) {
+    if (px >= ramp.minX && px <= ramp.maxX && pz >= ramp.minZ && pz <= ramp.maxZ) {
+      const axis = ramp.runAxis === 'x' ? px : pz
+      const range = ramp.runEnd - ramp.runStart
+      if (Math.abs(range) < 0.01) continue
+      const t = Math.max(0, Math.min(1, (axis - ramp.runStart) / range))
+      const y = ramp.baseY + t * (ramp.topY - ramp.baseY)
+      if (!onRamp || y > rampY) { onRamp = true; rampY = y }
+    }
+  }
+  if (onRamp) return rampY
+
+  // 2) Off the stairs → SOLID floor at the nearest level to the player's feet.
+  //    There is no hole to fall through: each floor is treated as a complete
+  //    slab, so once you step off the stairs onto a floor you stay on it.
+  if (h >= 1 && builtFloorCount > 1) {
+    const footY = currentY - playerHeight
+    const level = Math.max(0, Math.min(builtFloorCount - 1, Math.round(footY / h)))
+    return level * h
+  }
+
+  return 0
+}
+
+// Auto-step between floors using the committed-floor latch.
+//  • When the player is committed to a stair's LOWER floor and climbs near the
+//    top, they are snapped onto the floor above (placed just past the top step,
+//    on solid slab beyond the stairwell hole) so they never slide back down.
+//  • When committed to the UPPER floor, the staircase simply carries them down
+//    (handled by getPlayerFloorHeight); the latch resyncs at the bottom.
+const handleStairAutoStep = () => {
+  if (builtFloorCount <= 1 || !stairRamps.length || !camera) return
+
+  const h = wallHeight.value
+  const px = camera.position.x
+  const pz = camera.position.z
+  const footY = camera.position.y - playerHeight
+
+  // Find the staircase whose footprint the player is standing in
+  let cur = null
+  for (const r of stairRamps) {
+    if (px >= r.minX && px <= r.maxX && pz >= r.minZ && pz <= r.maxZ) { cur = r; break }
+  }
+
+  // Not on any staircase → settled on a floor; sync the latch (and the visible
+  // floor) from the player's height so the view always shows the floor you're on.
+  if (!cur) {
+    const lvl = Math.max(0, Math.min(builtFloorCount - 1, Math.round(footY / h)))
+    setWalkFloor(lvl)
+    return
+  }
+
+  const range = cur.runEnd - cur.runStart
+  if (Math.abs(range) < 0.01) return
+  const axis = cur.runAxis === 'x' ? px : pz
+  const t = Math.max(0, Math.min(1, (axis - cur.runStart) / range))
+
+  const lowerFloor = cur.floorIndex ?? 0
+
+  // Throttled diagnostic — shows progress while on a staircase
+  const now = performance.now()
+  if (now - _lastStairLog > 400) {
+    _lastStairLog = now
+    console.log(`[3DViewer] on stair: t=${t.toFixed(2)} committed=${committedFloor} lower=${lowerFloor} footY=${footY.toFixed(0)}`)
+  }
+
+  // Going UP this staircase and past halfway → step onto the floor above
+  if (committedFloor <= lowerFloor && t >= 0.6) {
+    const dir = Math.sign(cur.runEnd - cur.runStart) || 1
+    const margin = Math.max(12, Math.abs(range) * 0.12) // clears the (padded) stairwell hole
+    let landX, landZ
+    if (cur.runAxis === 'x') {
+      landX = cur.runEnd + dir * margin
+      landZ = Math.max(cur.minZ + 4, Math.min(cur.maxZ - 4, pz))
+    } else {
+      landZ = cur.runEnd + dir * margin
+      landX = Math.max(cur.minX + 4, Math.min(cur.maxX - 4, px))
+    }
+    camera.position.set(landX, cur.topY + playerHeight, landZ)
+    velocity.y = 0
+    canJump = true
+    console.log(`[3DViewer] AUTO-STEP onto floor ${lowerFloor + 1} (t=${t.toFixed(2)}) → land y=${(cur.topY + playerHeight).toFixed(0)}`)
+    setWalkFloor(lowerFloor + 1) // commit + toggle the view to the floor above
+  }
+  // else: committed to the upper floor → descending; ramp carries them down,
+  // latch resyncs to the lower floor when they step off at the bottom.
+}
+
+// Commit the player to a floor and, in walk mode, toggle the view so only that
+// floor (plus its connecting stairs) is shown.
+const setWalkFloor = (n) => {
+  if (committedFloor === n) return
+  committedFloor = n
+  currentFloorRef.value = n
+  if (isWalkMode.value) {
+    visibleFloor.value = n
+    applyFloorView()
+  }
+}
+
+// Shared texture caches so we don't re-create canvases every call
+let _wallTexCache = null
+let _doorTexCache = null
+
+const getWallTexture = () => {
+  if (_wallTexCache) return _wallTexCache.clone()
+  const c = document.createElement('canvas')
+  c.width = 512; c.height = 512
+  const g = c.getContext('2d')
+  // Plaster base
+  g.fillStyle = '#f5f0eb'
+  g.fillRect(0, 0, 512, 512)
+  // Subtle plaster grain
+  for (let i = 0; i < 600; i++) {
+    const shade = 220 + Math.floor(Math.random() * 30)
+    g.fillStyle = `rgb(${shade},${shade - 5},${shade - 10})`
+    g.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 3, 1 + Math.random() * 2)
+  }
+  // Faint horizontal lines (plaster strokes)
+  g.strokeStyle = 'rgba(180,170,160,0.08)'
+  g.lineWidth = 1
+  for (let y = 0; y < 512; y += 12 + Math.random() * 8) {
+    g.beginPath()
+    g.moveTo(0, y)
+    g.lineTo(512, y + (Math.random() - 0.5) * 3)
+    g.stroke()
+  }
+  _wallTexCache = new THREE.CanvasTexture(c)
+  _wallTexCache.wrapS = THREE.RepeatWrapping
+  _wallTexCache.wrapT = THREE.RepeatWrapping
+  return _wallTexCache.clone()
+}
+
+const getDoorTexture = () => {
+  if (_doorTexCache) return _doorTexCache.clone()
+  const c = document.createElement('canvas')
+  c.width = 256; c.height = 512
+  const g = c.getContext('2d')
+  // Wood base
+  g.fillStyle = '#6d4c2e'
+  g.fillRect(0, 0, 256, 512)
+  // Wood grain lines
+  for (let y = 0; y < 512; y += 3) {
+    const lightness = 35 + Math.sin(y * 0.12) * 8 + Math.random() * 6
+    g.fillStyle = `hsl(25, 45%, ${lightness}%)`
+    g.fillRect(0, y, 256, 2)
+  }
+  // Panel insets (two panels)
+  g.strokeStyle = 'rgba(0,0,0,0.25)'
+  g.lineWidth = 3
+  g.strokeRect(30, 30, 196, 200)
+  g.strokeRect(30, 270, 196, 200)
+  g.strokeStyle = 'rgba(255,255,255,0.1)'
+  g.lineWidth = 1
+  g.strokeRect(32, 32, 192, 196)
+  g.strokeRect(32, 272, 192, 196)
+  // Door handle
+  g.fillStyle = '#c0a060'
+  g.beginPath()
+  g.arc(210, 260, 8, 0, Math.PI * 2)
+  g.fill()
+  g.fillStyle = '#a08040'
+  g.beginPath()
+  g.arc(210, 260, 5, 0, Math.PI * 2)
+  g.fill()
+  _doorTexCache = new THREE.CanvasTexture(c)
+  _doorTexCache.wrapS = THREE.RepeatWrapping
+  _doorTexCache.wrapT = THREE.RepeatWrapping
+  return _doorTexCache.clone()
+}
+
+const createWall = (entity, yOffset = 0) => {
+  const { start, end } = entity
+  if (!start || !end) return null
+
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+  const length = Math.sqrt(dx * dx + dy * dy)
+  
+  const mapSize = mapBounds ? Math.max(mapBounds.maxX - mapBounds.minX, mapBounds.maxY - mapBounds.minY) : 1000
+  const minLength = mapSize * 0.001
+  if (length < minLength) return null
+
+  const height = wallHeight.value
+  const thickness = Math.max(mapSize * 0.001, 1.5)
+  const SPACE_EXPANSION = 6.0
+  const scaledLength = length * SPACE_EXPANSION
+  const lid = entity.layerId || 'other'
+
+  let mesh
+
+  if (lid === 'windows') {
+    // Glass window with frame
+    const group = new THREE.Group()
+    const frameH = height * 0.55
+    const frameBottom = height * 0.3
+    const frameThick = thickness * 1.2
+
+    // Bottom wall (below window)
+    const botGeo = new THREE.BoxGeometry(scaledLength, frameBottom, thickness)
+    const wallTex = getWallTexture()
+    wallTex.repeat.set(scaledLength / 300, frameBottom / 300)
+    const botMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.85, metalness: 0 })
+    const botMesh = new THREE.Mesh(botGeo, botMat)
+    botMesh.position.y = frameBottom / 2
+    botMesh.castShadow = true
+    botMesh.receiveShadow = true
+    group.add(botMesh)
+
+    // Top wall (above window)
+    const topH = height - frameBottom - frameH
+    if (topH > 0) {
+      const topGeo = new THREE.BoxGeometry(scaledLength, topH, thickness)
+      const topTex = getWallTexture()
+      topTex.repeat.set(scaledLength / 300, topH / 300)
+      const topMat = new THREE.MeshStandardMaterial({ map: topTex, roughness: 0.85, metalness: 0 })
+      const topMesh = new THREE.Mesh(topGeo, topMat)
+      topMesh.position.y = frameBottom + frameH + topH / 2
+      topMesh.castShadow = true
+      topMesh.receiveShadow = true
+      group.add(topMesh)
+    }
+
+    // Glass pane
+    const glassGeo = new THREE.BoxGeometry(scaledLength * 0.92, frameH * 0.9, thickness * 0.3)
+    const glassMat = new THREE.MeshPhysicalMaterial({
+      color: 0x88ccee,
+      transparent: true,
+      opacity: 0.35,
+      roughness: 0.05,
+      metalness: 0.1,
+      transmission: 0.6,
+      thickness: 0.5,
+      side: THREE.DoubleSide
+    })
+    const glassMesh = new THREE.Mesh(glassGeo, glassMat)
+    glassMesh.position.y = frameBottom + frameH / 2
+    group.add(glassMesh)
+
+    // Window frame (4 bars around the glass)
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.3, metalness: 0.4 })
+    const barW = scaledLength * 0.02
+    const barH = frameH
+    // Left frame
+    const lf = new THREE.Mesh(new THREE.BoxGeometry(barW, barH, frameThick), frameMat)
+    lf.position.set(-scaledLength * 0.46, frameBottom + frameH / 2, 0)
+    group.add(lf)
+    // Right frame
+    const rf = new THREE.Mesh(new THREE.BoxGeometry(barW, barH, frameThick), frameMat)
