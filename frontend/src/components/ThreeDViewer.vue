@@ -1501,3 +1501,253 @@ const createWall = (entity, yOffset = 0) => {
     group.add(lf)
     // Right frame
     const rf = new THREE.Mesh(new THREE.BoxGeometry(barW, barH, frameThick), frameMat)
+    rf.position.set(scaledLength * 0.46, frameBottom + frameH / 2, 0)
+    group.add(rf)
+    // Top frame
+    const tf = new THREE.Mesh(new THREE.BoxGeometry(scaledLength * 0.94, barW, frameThick), frameMat)
+    tf.position.set(0, frameBottom + frameH - barW / 2, 0)
+    group.add(tf)
+    // Bottom sill
+    const sillMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.4, metalness: 0.2 })
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(scaledLength * 0.98, barW, frameThick * 1.8), sillMat)
+    sill.position.set(0, frameBottom + barW / 2, frameThick * 0.3)
+    group.add(sill)
+    // Center vertical divider
+    const cv = new THREE.Mesh(new THREE.BoxGeometry(barW * 0.7, barH * 0.88, frameThick * 0.8), frameMat)
+    cv.position.set(0, frameBottom + frameH / 2, 0)
+    group.add(cv)
+
+    // Compute a combined bounding box for collision detection
+    const bbox = new THREE.Box3()
+    bbox.min.set(-scaledLength / 2, 0, -thickness / 2)
+    bbox.max.set(scaledLength / 2, height, thickness / 2)
+    group.userData = { originalHeight: height, boundingBox: bbox }
+
+    mesh = group
+  } else if (lid === 'doors') {
+    // Wooden door with frame
+    const group = new THREE.Group()
+    const doorH = height * 0.82
+    const frameW = scaledLength * 0.04
+
+    // Door panel
+    const doorGeo = new THREE.BoxGeometry(scaledLength - frameW * 2, doorH, thickness * 0.6)
+    const doorTex = getDoorTexture()
+    doorTex.repeat.set(1, 1)
+    const doorMat = new THREE.MeshStandardMaterial({ map: doorTex, roughness: 0.6, metalness: 0.05 })
+    const doorMesh = new THREE.Mesh(doorGeo, doorMat)
+    doorMesh.position.y = doorH / 2 + thickness * 0.1
+    doorMesh.castShadow = true
+    doorMesh.receiveShadow = true
+    group.add(doorMesh)
+
+    // Door frame
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f0, roughness: 0.4, metalness: 0.1 })
+    // Left jamb
+    const lj = new THREE.Mesh(new THREE.BoxGeometry(frameW, height, thickness * 1.1), frameMat)
+    lj.position.set(-scaledLength / 2 + frameW / 2, height / 2, 0)
+    lj.castShadow = true
+    group.add(lj)
+    // Right jamb
+    const rj = new THREE.Mesh(new THREE.BoxGeometry(frameW, height, thickness * 1.1), frameMat)
+    rj.position.set(scaledLength / 2 - frameW / 2, height / 2, 0)
+    rj.castShadow = true
+    group.add(rj)
+    // Lintel (top bar)
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(scaledLength, height - doorH, thickness * 1.1), frameMat)
+    lintel.position.y = doorH + (height - doorH) / 2
+    lintel.castShadow = true
+    group.add(lintel)
+
+    // Transom fill above door (wall material)
+    const transH = height - doorH
+    if (transH > 0) {
+      const twTex = getWallTexture()
+      twTex.repeat.set(scaledLength / 300, transH / 300)
+      const twMat = new THREE.MeshStandardMaterial({ map: twTex, roughness: 0.85, metalness: 0 })
+      const tw = new THREE.Mesh(new THREE.BoxGeometry(scaledLength - frameW * 2, transH * 0.8, thickness * 0.5), twMat)
+      tw.position.y = doorH + transH * 0.4
+      tw.receiveShadow = true
+      group.add(tw)
+    }
+
+    const bbox = new THREE.Box3()
+    bbox.min.set(-scaledLength / 2, 0, -thickness / 2)
+    bbox.max.set(scaledLength / 2, height, thickness / 2)
+    group.userData = { originalHeight: height, boundingBox: bbox }
+
+    mesh = group
+  } else {
+    // Standard wall with plaster texture
+    const wallTex = getWallTexture()
+    wallTex.repeat.set(scaledLength / 300, height / 300)
+
+  const geometry = new THREE.BoxGeometry(scaledLength, height, thickness)
+    geometry.computeBoundingBox()
+  const material = new THREE.MeshStandardMaterial({
+      map: wallTex,
+      roughness: 0.85,
+      metalness: 0,
+    })
+
+    // Subtle baseboard at the bottom
+    const group = new THREE.Group()
+    const wallMesh = new THREE.Mesh(geometry, material)
+    wallMesh.position.y = height / 2
+    wallMesh.castShadow = true
+    wallMesh.receiveShadow = true
+    group.add(wallMesh)
+
+    const baseH = height * 0.04
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0xf0ece8, roughness: 0.5, metalness: 0.05 })
+    const base = new THREE.Mesh(new THREE.BoxGeometry(scaledLength, baseH, thickness * 1.15), baseMat)
+    base.position.y = baseH / 2
+    base.receiveShadow = true
+    group.add(base)
+
+    // Crown molding at top
+    const crownH = height * 0.02
+    const crown = new THREE.Mesh(new THREE.BoxGeometry(scaledLength, crownH, thickness * 1.1), baseMat)
+    crown.position.y = height - crownH / 2
+    group.add(crown)
+
+    const bbox = new THREE.Box3()
+    bbox.min.set(-scaledLength / 2, 0, -thickness / 2)
+    bbox.max.set(scaledLength / 2, height, thickness / 2)
+    group.userData = { originalHeight: height, boundingBox: bbox }
+
+    mesh = group
+  }
+
+  // Position in expanded world space
+  const mapCenterX = mapBounds ? (mapBounds.minX + mapBounds.maxX) / 2 : 0
+  const mapCenterZ = mapBounds ? (mapBounds.minY + mapBounds.maxY) / 2 : 0
+  const rawCenterX = (start.x + end.x) / 2
+  const rawCenterZ = (start.y + end.y) / 2
+  const centerX = mapCenterX + (rawCenterX - mapCenterX) * SPACE_EXPANSION
+  const centerZ = mapCenterZ + (rawCenterZ - mapCenterZ) * SPACE_EXPANSION
+  mesh.position.set(centerX, yOffset, centerZ)
+  mesh.rotation.y = -Math.atan2(dy, dx)
+
+  return mesh
+}
+
+// Add room labels on the floor (Bedroom, Kitchen, etc.) for one floor
+const addFloorLabels = (entities, yOffset = 0, floorIndex = 0) => {
+  if (!mapBounds) return
+  const ents = entities || props.mapData?.entities
+  if (!ents) return
+
+  const rooms = detectRooms(ents)
+  const mapSize = Math.max(mapBounds.maxX - mapBounds.minX, mapBounds.maxY - mapBounds.minY)
+  const labelWidth = Math.max(mapSize * 0.03, 30)
+  const labelHeight = Math.max(mapSize * 0.012, 12)
+  const labelY = yOffset + 3 // Above this floor's slab to avoid z-fighting
+  
+  const LABEL_EXPANSION = 6.0
+  const mapCenterX = mapBounds ? (mapBounds.minX + mapBounds.maxX) / 2 : 0
+  const mapCenterZ = mapBounds ? (mapBounds.minY + mapBounds.maxY) / 2 : 0
+  rooms.forEach(room => {
+    const pos = room.position
+    if (!pos || !room.name) return
+    // Skip synthetic quadrant placeholders ("Area NW" etc.) — only real room labels
+    if (typeof room.id === 'string' && room.id.startsWith('area-')) return
+
+    const x = mapCenterX + (pos.x - mapCenterX) * LABEL_EXPANSION
+    const z = mapCenterZ + (pos.y - mapCenterZ) * LABEL_EXPANSION
+
+    // Canvas aspect ratio matches plane (width x height)
+    const cw = 320
+    const ch = 96
+    const canvas = document.createElement('canvas')
+    canvas.width = cw
+    canvas.height = ch
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, cw, ch)
+    
+    // Semi-opaque background so labels read clearly on floor
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'
+    ctx.strokeStyle = 'rgba(30, 58, 138, 0.6)'
+    ctx.lineWidth = 2
+    const pad = 8
+    ctx.beginPath()
+    ctx.roundRect(pad, pad, cw - pad * 2, ch - pad * 2, 6)
+    ctx.fill()
+    ctx.stroke()
+    
+    ctx.font = 'bold 28px sans-serif'
+    ctx.fillStyle = '#1e3a8a'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    
+    const text = room.name.slice(0, 20)
+    ctx.fillText(text, cw / 2, ch / 2)
+    
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.flipY = false
+    texture.needsUpdate = true
+    
+    const geometry = new THREE.PlaneGeometry(labelWidth, labelHeight)
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      alphaTest: 0.1,
+      depthWrite: true,
+      side: THREE.DoubleSide
+    })
+    
+    const label = new THREE.Mesh(geometry, material)
+    label.rotation.x = -Math.PI / 2
+    label.position.set(x, labelY, z)
+    label.renderOrder = 10
+    label.userData.layerId = 'labels'
+    label.userData.floorIndex = floorIndex
+
+    scene.add(label)
+    labelMeshes.push(label)
+  })
+}
+
+// Center camera on the model
+const centerCamera = (bounds) => {
+  const centerX = (bounds.minX + bounds.maxX) / 2
+  const centerZ = (bounds.minY + bounds.maxY) / 2
+  const size = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY)
+
+  if (isWalkMode.value) {
+    // Position at entrance for walk mode
+    camera.position.set(centerX, playerHeight, centerZ + size * 0.3)
+    camera.lookAt(centerX, playerHeight, centerZ)
+  } else {
+    camera.position.set(centerX + size * 0.6, size * 0.5, centerZ + size * 0.6)
+    if (orbitControls) {
+      orbitControls.target.set(centerX, wallHeight.value / 3, centerZ)
+      orbitControls.update()
+    }
+  }
+}
+
+// Update mini map camera
+const updateMiniMapCamera = () => {
+  if (!miniMapCamera || !expandedBounds) return
+  
+  const centerX = (expandedBounds.minX + expandedBounds.maxX) / 2
+  const centerZ = (expandedBounds.minY + expandedBounds.maxY) / 2
+  const sizeX = (expandedBounds.maxX - expandedBounds.minX) * 0.6
+  const sizeZ = (expandedBounds.maxY - expandedBounds.minY) * 0.6
+  const size = Math.max(sizeX, sizeZ)
+  
+  miniMapCamera.left = -size
+  miniMapCamera.right = size
+  miniMapCamera.top = size
+  miniMapCamera.bottom = -size
+  miniMapCamera.up.set(0, 0, -1)
+  miniMapCamera.position.set(centerX, 5000, centerZ)
+  miniMapCamera.lookAt(centerX, 0, centerZ)
+  miniMapCamera.updateProjectionMatrix()
+}
+
+// Clear all meshes
+const clearMeshes = () => {
+  builtFloorCount = 1
+  wallMeshes.forEach(obj => {
