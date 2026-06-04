@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DXF Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f12;
+      --surface: #18181d;
+      --border: #2a2a32;
+      --text: #e8e8ec;
+      --text-muted: #8888a0;
+      --accent: #00d4aa;
+      --accent-dim: rgba(0, 212, 170, 0.15);
+      --error: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { font-size: 1.25rem; font-weight: 600; margin: 0; }
+    .tagline { font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem; }
+    main {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      background: var(--surface);
+      transition: all 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .upload-zone input { display: none; }
+    .upload-icon { width: 48px; height: 48px; margin: 0 auto 1rem; opacity: 0.6; }
+    .upload-zone p { margin: 0; font-size: 1rem; color: var(--text-muted); }
+    .upload-zone p strong { color: var(--text); }
+    .hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .map-wrapper {
+      flex: 1;
+      min-height: 450px;
+      margin-top: 1.5rem;
+      background: #1a1a1f;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .map-wrapper .placeholder { color: var(--text-muted); font-size: 0.9rem; padding: 2rem; }
+    .map-container { width: 100%; height: 100%; min-height: 400px; }
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      color: var(--text-muted);
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-msg {
+      padding: 1rem 1.5rem;
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid var(--error);
+      border-radius: 8px;
+      color: var(--error);
+      font-size: 0.9rem;
+      margin-top: 1rem;
+    }
+    .file-name { font-size: 0.8rem; color: var(--accent); margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DXF Viewer</h1>
+    <p class="tagline">Upload a DXF file to view your drawing</p>
+    <p class="file-name" id="fileName"></p>
+  </header>
+
+  <main>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".dxf" />
+      <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="17 8 12 3 7 8" />
+        <line x1="12" y1="3" x2="12" y2="15" />
+      </svg>
+      <p><strong>Drop a DXF file here</strong> or click to browse</p>
+      <p class="hint">Pan & zoom with mouse · All processing happens locally</p>
+    </div>
+
+    <div class="map-wrapper" id="mapWrapper">
+      <div class="map-container" id="mapContainer">
+        <div class="placeholder">Your DXF drawing will appear here</div>
+      </div>
+    </div>
+    <div id="errorArea"></div>
+  </main>
+
+  <script type="module">
+    import { DxfViewer } from 'dxf-viewer';
+
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const mapContainer = document.getElementById('mapContainer');
+    const fileNameEl = document.getElementById('fileName');
+    const errorArea = document.getElementById('errorArea');
+
+    let viewer = null;
+    let currentObjectUrl = null;
+
+    function showError(msg) {
+      errorArea.innerHTML = msg ? `<div class="error-msg">${msg}</div>` : '';
+    }
+
+    function showPlaceholder() {
+      mapContainer.innerHTML = '<div class="placeholder">Your DXF drawing will appear here</div>';
+    }
+
+    function cleanup() {
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+      }
+      if (viewer) {
+        viewer.Destroy();
+        viewer = null;
+      }
+    }
+
+    async function loadAndDisplay(file) {
+      showError('');
+      cleanup();
+
+      mapContainer.innerHTML = `
+        <div class="loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <div class="spinner"></div>
+          <span>Loading DXF...</span>
+        </div>`;
+
+      try {
+        currentObjectUrl = URL.createObjectURL(file);
+        mapContainer.innerHTML = '';
+        mapContainer.style.display = 'block';
+
+        viewer = new DxfViewer(mapContainer, { autoResize: true });
+
+        viewer.Subscribe('message', (e) => {
+          if (e.detail.level === 'error') showError(e.detail.message);
+        });
+
+        const fonts = [
+          'https://cdn.jsdelivr.net/npm/three@0.161.0/examples/fonts/ttf/kenpixel.ttf'
+        ];
+
+        await viewer.Load({
+          url: currentObjectUrl,
+          fonts,
+          progressCbk: () => {}
+        });
+      } catch (e) {
+        showError(e.message || 'Failed to load DXF.');
+        showPlaceholder();
+      }
+    }
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.toLowerCase().endsWith('.dxf')) {
+        fileNameEl.textContent = file.name;
+        loadAndDisplay(file);
+      } else if (file) showError('Please select a .dxf file.');
+    });
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (file) { fileNameEl.textContent = file.name; loadAndDisplay(file); }
+    });
+  </script>
+</body>
+</html>
