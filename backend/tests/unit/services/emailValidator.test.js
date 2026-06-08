@@ -122,3 +122,125 @@ describe('checkMxRecords', () => {
     dns.resolveMx.mockImplementation((domain, cb) => {
       const err = new Error('ENOTFOUND');
       err.code = 'ENOTFOUND';
+      cb(err);
+    });
+
+    const result = await checkMxRecords('nonexistent.xyz');
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('ENOTFOUND');
+  });
+
+  test('returns valid:false and captures error code on DNS failure', async () => {
+    dns.resolveMx.mockImplementation((domain, cb) => {
+      const err = new Error('ESERVFAIL');
+      err.code = 'ESERVFAIL';
+      cb(err);
+    });
+
+    const result = await checkMxRecords('fail.example');
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('ESERVFAIL');
+  });
+
+  test('maps multiple MX records and preserves exchange/priority', async () => {
+    dns.resolveMx.mockImplementation((domain, cb) => {
+      cb(null, [
+        { exchange: 'mx1.example.com', priority: 10 },
+        { exchange: 'mx2.example.com', priority: 20 },
+      ]);
+    });
+
+    const result = await checkMxRecords('example.com');
+    expect(result.valid).toBe(true);
+    expect(result.mxRecords).toHaveLength(2);
+    expect(result.mxRecords[1].exchange).toBe('mx2.example.com');
+  });
+
+  test('does not throw — always resolves the promise even on DNS errors', async () => {
+    dns.resolveMx.mockImplementation((domain, cb) => {
+      cb(new Error('Network failure'));
+    });
+
+    await expect(checkMxRecords('broken.net')).resolves.toBeDefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// validateEmailExists
+// ─────────────────────────────────────────────────────────────
+describe('validateEmailExists', () => {
+  beforeEach(() => {
+    dns.resolveMx.mockReset();
+  });
+
+  test('happy path: valid email with working MX record returns isValid:true', async () => {
+    dns.resolveMx.mockImplementation((domain, cb) => {
+      cb(null, [{ exchange: 'mx.gmail.com', priority: 10 }]);
+    });
+
+    const result = await validateEmailExists('user@gmail.com');
+    expect(result.isValid).toBe(true);
+    expect(result.message).toBe('Email address is valid');
+  });
+
+  test('returns isValid:false for email without @ (invalid format)', async () => {
+    const result = await validateEmailExists('notanemail');
+    expect(result.isValid).toBe(false);
+    expect(result.details.reason).toBe('invalid_format');
+  });
+
+  test('returns isValid:false for a disposable email domain', async () => {
+    const result = await validateEmailExists('user@mailinator.com');
+    expect(result.isValid).toBe(false);
+    expect(result.details.reason).toBe('disposable_email');
+  });
+
+  test('returns isValid:false when domain has no MX records', async () => {
+    dns.resolveMx.mockImplementation((domain, cb) => {
+      const err = new Error('ENOTFOUND');
+      err.code = 'ENOTFOUND';
+      cb(err);
+    });
+
+    const result = await validateEmailExists('user@fakexyz123.com');
+    expect(result.isValid).toBe(false);
+    expect(result.details.reason).toBe('no_mx_records');
+  });
+
+  test('returns correct domain in details for a valid email', async () => {
+    dns.resolveMx.mockImplementation((domain, cb) => {
+      cb(null, [{ exchange: 'mx.yahoo.com', priority: 10 }]);
+    });
+
+    const result = await validateEmailExists('user@yahoo.com');
+    expect(result.details.domain).toBe('yahoo.com');
+  });
+
+  test('fails fast on disposable domain without any DNS call', async () => {
+    await validateEmailExists('user@tempmail.com');
+    expect(dns.resolveMx).not.toHaveBeenCalled();
+  });
+
+  test('always returns an object with isValid, message, and details keys', async () => {
+    dns.resolveMx.mockImplementation((domain, cb) => {
+      cb(null, [{ exchange: 'mx.test.com', priority: 1 }]);
+    });
+
+    const result = await validateEmailExists('user@test.com');
+    expect(result).toHaveProperty('isValid');
+    expect(result).toHaveProperty('message');
+    expect(result).toHaveProperty('details');
+  });
+
+  test('returns isValid:false message for a non-existent TLD', async () => {
+    dns.resolveMx.mockImplementation((domain, cb) => {
+      const err = new Error('ENOTFOUND');
+      err.code = 'ENOTFOUND';
+      cb(err);
+    });
+
+    const result = await validateEmailExists('user@completelynonexistent.invalid');
+    expect(result.isValid).toBe(false);
+    expect(result.message).toMatch(/does not exist|no_mx/i);
+  });
+});
