@@ -80,3 +80,84 @@ describe('validatePassword', () => {
       expect(result.isValid).toBe(true);
     });
   });
+
+  test('password with only spaces fails (too short and no criteria met)', () => {
+    const result = validatePassword('        '); // 8 spaces
+    expect(result.isValid).toBe(false);
+    // spaces don't satisfy uppercase / lowercase / number / special
+    expect(result.errors.length).toBeGreaterThan(0);
+  });
+
+  test('very long valid password is accepted', () => {
+    const result = validatePassword('MyVeryL0ng&SecurePassword!ForTesting');
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// calculatePasswordStrength
+// ─────────────────────────────────────────────────────────────
+describe('calculatePasswordStrength', () => {
+  // Scoring: +1 each for length≥8, length≥12, uppercase, lowercase, number, special
+  // levels = ['Very Weak'(1), 'Weak'(2), 'Fair'(3), 'Good'(4), 'Strong'(5), 'Very Strong'(6)]
+  // strength=0 → 'Very Weak' (via the `|| 'Very Weak'` fallback)
+
+  test('empty string returns Very Weak', () => {
+    expect(calculatePasswordStrength('')).toBe('Very Weak');
+  });
+
+  test('single lowercase letter returns Very Weak (strength=1 → index 0)', () => {
+    // length<8 → 0, has lowercase → 1, total=1
+    expect(calculatePasswordStrength('a')).toBe('Very Weak');
+  });
+
+  test('8+ chars with only mixed case returns Weak (strength=2)', () => {
+    // length≥8 → 1, uppercase → 1, lowercase → 1, no number, no special → 3 = Fair
+    // actually: length>=8(1) + uppercase(1) + lowercase(1) = 3 → 'Fair'
+    expect(calculatePasswordStrength('AbcdefghAB')).toBe('Fair');
+  });
+
+  test('8+ chars with letters only (same case) returns Weak (strength=2)', () => {
+    // length≥8 → 1, lowercase only → 1 = strength 2 → 'Weak'
+    expect(calculatePasswordStrength('abcdefgh')).toBe('Weak');
+  });
+
+  test('8-char password meeting all 5 criteria returns Strong (strength=5)', () => {
+    // length≥8(1) + uppercase(1) + lowercase(1) + number(1) + special(1) = 5 → 'Strong'
+    expect(calculatePasswordStrength('Abc12@de')).toBe('Strong');
+  });
+
+  test('12+ char password meeting all criteria returns Very Strong (strength=6)', () => {
+    // length≥8(1) + length≥12(1) + uppercase(1) + lowercase(1) + number(1) + special(1) = 6
+    expect(calculatePasswordStrength('Abcdef1234@A')).toBe('Very Strong');
+  });
+
+  test('password between 8 and 11 chars with all criteria returns Strong, not Very Strong', () => {
+    const result = calculatePasswordStrength('Abc1@defG'); // 9 chars
+    expect(result).toBe('Strong');
+    expect(result).not.toBe('Very Strong');
+  });
+
+  test('number-only string under 8 chars returns Very Weak', () => {
+    // length<8 → 0, number → 1, total=1 → 'Very Weak'
+    expect(calculatePasswordStrength('123')).toBe('Very Weak');
+  });
+
+  test('returns one of the 6 defined strength levels', () => {
+    const validLevels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+    const passwords = ['', 'a', 'abcdefgh', 'Abcdefgh', 'Abc12@de', 'Abcdef1234@A'];
+    passwords.forEach((pwd) => {
+      expect(validLevels).toContain(calculatePasswordStrength(pwd));
+    });
+  });
+
+  test('special characters in the allowed set contribute to strength', () => {
+    // Without special → strength 4 ('Good'), with special → strength 5 ('Strong')
+    const withoutSpecial = calculatePasswordStrength('Abcdefg1');
+    const withSpecial    = calculatePasswordStrength('Abcdefg1@');
+    // withSpecial should rank higher (or at least not lower)
+    const levels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
+    expect(levels.indexOf(withSpecial)).toBeGreaterThan(levels.indexOf(withoutSpecial));
+  });
+});
