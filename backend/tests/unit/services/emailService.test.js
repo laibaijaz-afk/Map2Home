@@ -119,3 +119,122 @@ describe('sendWelcomeEmail', () => {
 
     const html = sendEmail.mock.calls[0][2];
     expect(html).toContain('Map2Home');
+  });
+
+  test('HTML body contains the user name', async () => {
+    await sendWelcomeEmail({ name: 'Harry', email: 'harry@example.com' });
+
+    const html = sendEmail.mock.calls[0][2];
+    expect(html).toContain('Harry');
+  });
+
+  test('escapes HTML in user name', async () => {
+    await sendWelcomeEmail({ name: '<b>Bold</b>', email: 'b@example.com' });
+
+    const html = sendEmail.mock.calls[0][2];
+    expect(html).toContain('&lt;b&gt;');
+    expect(html).not.toContain('<b>Bold</b>');
+  });
+
+  test('throws with descriptive message when user is null', async () => {
+    await expect(sendWelcomeEmail(null)).rejects.toThrow(
+      'sendWelcomeEmail: invalid user or missing email'
+    );
+  });
+
+  test('throws when user.email is missing', async () => {
+    await expect(sendWelcomeEmail({ name: 'NoEmail' })).rejects.toThrow(
+      'sendWelcomeEmail: invalid user or missing email'
+    );
+  });
+
+  test('does NOT re-throw when sendEmail rejects (non-critical email, swallowed)', async () => {
+    sendEmail.mockRejectedValue(new Error('Server down'));
+
+    // sendWelcomeEmail catches errors internally and logs them instead of throwing
+    await expect(sendWelcomeEmail({ name: 'Ivan', email: 'i@example.com' })).resolves.toBeUndefined();
+  });
+
+  test('uses email as display name when name is absent', async () => {
+    await sendWelcomeEmail({ email: 'noname@example.com' });
+
+    const html = sendEmail.mock.calls[0][2];
+    expect(html).toContain('noname@example.com');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
+// sendResetPasswordEmail
+// ─────────────────────────────────────────────────────────────
+describe('sendResetPasswordEmail', () => {
+  test('happy path: calls sendEmail with correct recipient and subject', async () => {
+    await sendResetPasswordEmail('jane@example.com', 'reset-token-xyz', 'Jane');
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(sendEmail).toHaveBeenCalledWith(
+      'jane@example.com',
+      'Reset your password',
+      expect.any(String)
+    );
+  });
+
+  test('HTML body contains the reset token in the link', async () => {
+    await sendResetPasswordEmail('u@example.com', 'my-reset-token', 'User');
+
+    const html = sendEmail.mock.calls[0][2];
+    expect(html).toContain('my-reset-token');
+  });
+
+  test('HTML body contains the user name', async () => {
+    await sendResetPasswordEmail('u@example.com', 'tok', 'Kristine');
+
+    const html = sendEmail.mock.calls[0][2];
+    expect(html).toContain('Kristine');
+  });
+
+  test('uses email as display name when userName is not provided', async () => {
+    await sendResetPasswordEmail('noname@example.com', 'tok');
+
+    const html = sendEmail.mock.calls[0][2];
+    expect(html).toContain('noname@example.com');
+  });
+
+  test('escapes HTML in userName', async () => {
+    await sendResetPasswordEmail('u@example.com', 'tok', '<img src=x onerror=alert(1)>');
+
+    const html = sendEmail.mock.calls[0][2];
+    expect(html).toContain('&lt;img');
+    expect(html).not.toContain('<img src=x');
+  });
+
+  test('throws when email is missing', async () => {
+    await expect(sendResetPasswordEmail(undefined, 'tok', 'User')).rejects.toThrow(
+      'sendResetPasswordEmail: missing email'
+    );
+  });
+
+  test('re-throws when sendEmail rejects', async () => {
+    sendEmail.mockRejectedValue(new Error('Timeout'));
+
+    await expect(
+      sendResetPasswordEmail('u@example.com', 'tok', 'User')
+    ).rejects.toThrow('Timeout');
+  });
+
+  test('reset link is built from FRONTEND_URL env var', async () => {
+    process.env.FRONTEND_URL = 'https://app.map2home.com';
+    await sendResetPasswordEmail('u@example.com', 'mytoken', 'User');
+
+    const html = sendEmail.mock.calls[0][2];
+    expect(html).toContain('https://app.map2home.com');
+    expect(html).toContain('mytoken');
+  });
+
+  test('HTML includes a clickable anchor tag', async () => {
+    await sendResetPasswordEmail('u@example.com', 'tok', 'User');
+
+    const html = sendEmail.mock.calls[0][2];
+    expect(html).toContain('<a ');
+    expect(html).toContain('href=');
+  });
+});
