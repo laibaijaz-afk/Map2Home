@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Map2Home — Test Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #222; }
+
+  /* ── Header ── */
+  .header { background: linear-gradient(135deg, #1a237e 0%, #283593 60%, #3949ab 100%); color: #fff; padding: 36px 48px; }
+  .header h1 { font-size: 2rem; font-weight: 700; letter-spacing: 0.5px; }
+  .header .subtitle { margin-top: 6px; font-size: 0.95rem; opacity: 0.85; }
+
+  /* ── Container ── */
+  .container { max-width: 1280px; margin: 0 auto; padding: 32px 24px 60px; }
+
+  /* ── Summary Cards ── */
+  .summary { display: flex; gap: 20px; margin-bottom: 36px; flex-wrap: wrap; }
+  .card { flex: 1; min-width: 160px; background: #fff; border-radius: 10px;
+          padding: 22px 28px; box-shadow: 0 2px 8px rgba(0,0,0,.08); text-align: center; }
+  .card .num { font-size: 2.6rem; font-weight: 800; line-height: 1; }
+  .card .lbl { margin-top: 6px; font-size: 0.82rem; font-weight: 600; text-transform: uppercase;
+               letter-spacing: 1px; color: #666; }
+  .card.total  .num { color: #1a237e; }
+  .card.passed .num { color: #2e7d32; }
+  .card.failed .num { color: #c62828; }
+  .card.skip   .num { color: #e65100; }
+  .card.suites .num { color: #4527a0; }
+
+  /* ── Section Heading ── */
+  .section-title { font-size: 1.3rem; font-weight: 700; color: #1a237e; margin: 36px 0 16px;
+                   padding-bottom: 8px; border-bottom: 3px solid #3949ab; }
+
+  /* ── File Block ── */
+  .file-block { background: #fff; border-radius: 10px; margin-bottom: 24px;
+                box-shadow: 0 2px 8px rgba(0,0,0,.07); overflow: hidden; }
+  .file-header { display: flex; align-items: center; justify-content: space-between;
+                 background: #e8eaf6; padding: 14px 20px; border-bottom: 1px solid #c5cae9; }
+  .file-name { font-size: 1rem; font-weight: 700; color: #283593; }
+  .file-path { font-size: 0.76rem; color: #666; margin-top: 2px; font-family: monospace; }
+  .file-badge { font-size: 0.78rem; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+                background: #2e7d32; color: #fff; white-space: nowrap; }
+  .file-badge.fail { background: #c62828; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: #f5f5f5; padding: 10px 16px; font-size: 0.78rem; font-weight: 700;
+             text-transform: uppercase; letter-spacing: 0.7px; color: #555;
+             text-align: left; border-bottom: 2px solid #e0e0e0; }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  tbody tr:hover { background: #f3f4ff; }
+  td { padding: 9px 16px; font-size: 0.875rem; border-bottom: 1px solid #efefef; vertical-align: top; }
+  td.test-name { color: #333; }
+  td.status { font-weight: 700; font-size: 0.82rem; white-space: nowrap; }
+  td.status.pass { color: #2e7d32; }
+  td.status.fail { color: #c62828; }
+  td.num-col { color: #888; font-size: 0.8rem; width: 42px; text-align: right; }
+
+  /* ── Coverage Banner ── */
+  .coverage-note { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px;
+                   padding: 14px 20px; margin-bottom: 28px; font-size: 0.88rem; color: #1b5e20; }
+  .coverage-note strong { font-weight: 700; }
+
+  /* ── Footer ── */
+  .footer { text-align: center; font-size: 0.8rem; color: #999; margin-top: 48px; padding-top: 20px;
+            border-top: 1px solid #e0e0e0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>&#128203; Map2Home — Test Report</h1>
+  <div class="subtitle">Generated: Sunday, 15 June 2026 &nbsp;|&nbsp; Runner: Jest 29 &nbsp;|&nbsp; Node.js v22 &nbsp;|&nbsp; Duration: 160.16 s</div>
+</div>
+
+<div class="container">
+
+  <!-- ── Summary ── -->
+  <div class="summary">
+    <div class="card total">  <div class="num">322</div><div class="lbl">Total Tests</div></div>
+    <div class="card passed"><div class="num">322</div><div class="lbl">Passed</div></div>
+    <div class="card failed"><div class="num">0</div>  <div class="lbl">Failed</div></div>
+    <div class="card skip">  <div class="num">0</div>  <div class="lbl">Skipped</div></div>
+    <div class="card suites"><div class="num">12</div> <div class="lbl">Test Suites</div></div>
+  </div>
+
+  <div class="coverage-note">
+    <strong>&#9989; All 322 tests passed across 12 test suites</strong> &mdash;
+    136 unit tests &bull; 186 integration tests &bull; 0 failures &bull; 0 skipped
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION 1 — UNIT TESTS
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="section-title">Section 1 &mdash; Unit Tests (136 tests)</div>
+
+  <!-- ── passwordValidator ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">passwordValidator tests</div>
+        <div class="file-path">tests/unit/utils/passwordValidator.test.js</div>
+      </div>
+      <span class="file-badge">24 / 24 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">validatePassword &mdash; happy path: valid password returns isValid true with no errors</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">validatePassword &mdash; happy path: returns a strength property alongside validation result</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">validatePassword &mdash; fails when password is shorter than 8 characters</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">validatePassword &mdash; boundary: exactly 7 characters fails length check</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">validatePassword &mdash; boundary: exactly 8 characters with all requirements passes</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">validatePassword &mdash; fails when no uppercase letter present</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">validatePassword &mdash; fails when no lowercase letter present</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">validatePassword &mdash; fails when no digit present</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">validatePassword &mdash; fails when no special character present</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">validatePassword &mdash; empty string accumulates all 5 error messages</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">validatePassword &mdash; multiple failures produce multiple error messages</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">validatePassword &mdash; each allowed special character individually satisfies the requirement</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">validatePassword &mdash; password with only spaces fails (too short and no criteria met)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">validatePassword &mdash; very long valid password is accepted</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">calculatePasswordStrength &mdash; empty string returns Very Weak</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">calculatePasswordStrength &mdash; single lowercase letter returns Very Weak (strength=1 &rarr; index 0)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">calculatePasswordStrength &mdash; 8+ chars with only mixed case returns Fair (strength=3)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">calculatePasswordStrength &mdash; 8+ chars with letters only (same case) returns Weak (strength=2)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">calculatePasswordStrength &mdash; 8-char password meeting all 5 criteria returns Strong (strength=5)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">calculatePasswordStrength &mdash; 12+ char password meeting all criteria returns Very Strong (strength=6)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">calculatePasswordStrength &mdash; password between 8 and 11 chars with all criteria returns Strong, not Very Strong</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">22</td><td class="test-name">calculatePasswordStrength &mdash; number-only string under 8 chars returns Very Weak</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">23</td><td class="test-name">calculatePasswordStrength &mdash; returns one of the 6 defined strength levels</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">24</td><td class="test-name">calculatePasswordStrength &mdash; special characters in the allowed set contribute to strength</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── tokenUtils ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">tokenUtils tests</div>
+        <div class="file-path">tests/unit/utils/tokenUtils.test.js</div>
+      </div>
+      <span class="file-badge">29 / 29 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">generateToken &mdash; happy path: returns a non-empty string</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">generateToken &mdash; returned value has the three-segment JWT format (header.payload.signature)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">generateToken &mdash; token payload encodes the correct userId</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">generateToken &mdash; different user IDs produce different tokens</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">generateToken &mdash; custom expiresIn is accepted and token remains valid</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">generateToken &mdash; expired token (expiresIn=-1s) cannot be verified</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">generateToken &mdash; userId=0 is encoded correctly</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">generateToken &mdash; large userId is encoded without precision loss</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">verifyToken &mdash; happy path: decodes a freshly generated token and returns correct id</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">verifyToken &mdash; decoded payload includes iat (issued-at) timestamp</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">verifyToken &mdash; throws "Invalid or expired token" for a random string</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">verifyToken &mdash; throws for an empty string</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">verifyToken &mdash; throws for a tampered signature segment</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">verifyToken &mdash; throws for a token signed with a different secret</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">verifyToken &mdash; throws for an expired token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">verifyToken &mdash; throws for a null input</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">generateRandomToken &mdash; returns a string</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">generateRandomToken &mdash; returns exactly 64 hex characters (32 bytes &times; 2)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">generateRandomToken &mdash; output matches lowercase hex pattern</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">generateRandomToken &mdash; two consecutive calls produce different tokens</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">generateRandomToken &mdash; 10 generated tokens are all unique</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">22</td><td class="test-name">generateRandomToken &mdash; never returns an empty string</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">23</td><td class="test-name">hashToken &mdash; returns a string</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">24</td><td class="test-name">hashToken &mdash; returns a 64-character lowercase hex string (SHA-256 output)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">25</td><td class="test-name">hashToken &mdash; is deterministic: same input always produces the same hash</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">26</td><td class="test-name">hashToken &mdash; different inputs produce different hashes (collision resistance)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">27</td><td class="test-name">hashToken &mdash; handles empty string without throwing</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">28</td><td class="test-name">hashToken &mdash; hashing the hash of a token produces a valid hash (chaining)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">29</td><td class="test-name">hashToken &mdash; hash of a known value matches the expected SHA-256 digest</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── emailValidator ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">emailValidator tests</div>
+        <div class="file-path">tests/unit/services/emailValidator.test.js</div>
+      </div>
+      <span class="file-badge">30 / 30 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">extractDomain &mdash; happy path: extracts domain from a standard email</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">extractDomain &mdash; converts the domain to lowercase</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">extractDomain &mdash; trims surrounding whitespace before parsing</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">extractDomain &mdash; returns null when there is no @ symbol</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">extractDomain &mdash; returns null for an empty string</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">extractDomain &mdash; returns null when there are two @ symbols (invalid format)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">extractDomain &mdash; handles sub-domain addresses correctly</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">extractDomain &mdash; throws TypeError when called with null (documents the contract boundary)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">isDisposableEmail &mdash; happy path: returns false for a real domain like gmail.com</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">isDisposableEmail &mdash; returns true for mailinator.com (known disposable)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">isDisposableEmail &mdash; returns true for guerrillamail.com (known disposable)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">isDisposableEmail &mdash; returns true for tempmail.com (known disposable)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">isDisposableEmail &mdash; returns true for yopmail.com (known disposable)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">isDisposableEmail &mdash; returns false for outlook.com (legitimate provider)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">isDisposableEmail &mdash; is case-insensitive for the domain check</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">isDisposableEmail &mdash; returns false for an unknown/random domain</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">checkMxRecords &mdash; happy path: returns valid:true and mxRecords array when DNS resolves</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">checkMxRecords &mdash; returns valid:false when DNS returns an empty MX array</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">checkMxRecords &mdash; returns valid:false when DNS lookup fails with ENOTFOUND</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">checkMxRecords &mdash; returns valid:false and captures error code on DNS failure</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">checkMxRecords &mdash; maps multiple MX records and preserves exchange/priority</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">22</td><td class="test-name">checkMxRecords &mdash; does not throw — always resolves the promise even on DNS errors</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">23</td><td class="test-name">validateEmailExists &mdash; happy path: valid email with working MX record returns isValid:true</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">24</td><td class="test-name">validateEmailExists &mdash; returns isValid:false for email without @ (invalid format)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">25</td><td class="test-name">validateEmailExists &mdash; returns isValid:false for a disposable email domain</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">26</td><td class="test-name">validateEmailExists &mdash; returns isValid:false when domain has no MX records</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">27</td><td class="test-name">validateEmailExists &mdash; returns correct domain in details for a valid email</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">28</td><td class="test-name">validateEmailExists &mdash; fails fast on disposable domain without any DNS call</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">29</td><td class="test-name">validateEmailExists &mdash; always returns an object with isValid, message, and details keys</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">30</td><td class="test-name">validateEmailExists &mdash; returns isValid:false message for a non-existent TLD</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── emailService ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">emailService tests</div>
+        <div class="file-path">tests/unit/services/emailService.test.js</div>
+      </div>
+      <span class="file-badge">27 / 27 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">sendVerificationEmail &mdash; happy path: calls sendEmail with the correct recipient and subject</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">sendVerificationEmail &mdash; HTML body contains the token in the verification link</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">sendVerificationEmail &mdash; HTML body contains the user name</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">sendVerificationEmail &mdash; escapes dangerous HTML in user name (XSS prevention via escapeHtml)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">sendVerificationEmail &mdash; uses email address as display name when name is absent</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">sendVerificationEmail &mdash; throws with descriptive message when user is null</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">sendVerificationEmail &mdash; throws with descriptive message when user.email is missing</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">sendVerificationEmail &mdash; wraps sendEmail errors with a descriptive message</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">sendVerificationEmail &mdash; HTML includes a clickable anchor tag with the verification URL</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">sendVerificationEmail &mdash; token is URL-encoded in the verification link (handles special chars)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">sendWelcomeEmail &mdash; happy path: calls sendEmail with correct recipient and subject</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">sendWelcomeEmail &mdash; HTML body contains the Map2Home branding</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">sendWelcomeEmail &mdash; HTML body contains the user name</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">sendWelcomeEmail &mdash; escapes HTML in user name</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">sendWelcomeEmail &mdash; throws with descriptive message when user is null</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">sendWelcomeEmail &mdash; throws when user.email is missing</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">sendWelcomeEmail &mdash; does NOT re-throw when sendEmail rejects (non-critical email, swallowed)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">sendWelcomeEmail &mdash; uses email as display name when name is absent</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">sendResetPasswordEmail &mdash; happy path: calls sendEmail with correct recipient and subject</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">sendResetPasswordEmail &mdash; HTML body contains the reset token in the link</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">sendResetPasswordEmail &mdash; HTML body contains the user name</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">22</td><td class="test-name">sendResetPasswordEmail &mdash; uses email as display name when userName is not provided</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">23</td><td class="test-name">sendResetPasswordEmail &mdash; escapes HTML in userName</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">24</td><td class="test-name">sendResetPasswordEmail &mdash; throws when email is missing</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">25</td><td class="test-name">sendResetPasswordEmail &mdash; re-throws when sendEmail rejects</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">26</td><td class="test-name">sendResetPasswordEmail &mdash; reset link is built from FRONTEND_URL env var</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">27</td><td class="test-name">sendResetPasswordEmail &mdash; HTML includes a clickable anchor tag</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── floorPlan3D ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">floorPlan3D tests</div>
+        <div class="file-path">tests/unit/controllers/floorPlan3DController.test.js</div>
+      </div>
+      <span class="file-badge">26 / 26 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">syncMapTo3D — input validation &mdash; returns 400 when mapData is missing entirely</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">syncMapTo3D — input validation &mdash; returns 400 when mapData is a string, not an object</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">syncMapTo3D — input validation &mdash; returns 400 when mapData is an array (arrays are not plain objects)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">syncMapTo3D — input validation &mdash; returns 400 when mapData.metadata is missing</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">syncMapTo3D — input validation &mdash; returns 400 when mapData.metadata is not an object</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">syncMapTo3D — input validation &mdash; returns 400 when mapData.entities is missing</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">syncMapTo3D — input validation &mdash; returns 400 when mapData.entities is an object, not an array</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">syncMapTo3D — input validation &mdash; validation error response always has success:false</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">syncMapTo3D — 3D service not configured &mdash; returns 503 when FLOORPLAN3D_API_URL is not set</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">syncMapTo3D — 3D service not configured &mdash; 503 response includes code FLOORPLAN3D_NOT_CONFIGURED</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">syncMapTo3D — 3D service not configured &mdash; 503 response has success:false</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">syncMapTo3D — 3D service not configured &mdash; axios.create is NOT called when URL is absent</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">syncMapTo3D — 3D service not configured &mdash; 503 message mentions the service is not configured</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">syncMapTo3D — successful 3D generation &mdash; happy path: returns 200 with success:true when service responds</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">syncMapTo3D — successful 3D generation &mdash; response includes model.url from the upstream service</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">syncMapTo3D — successful 3D generation &mdash; response includes the revision that was sent in the payload</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">syncMapTo3D — successful 3D generation &mdash; handles upstream data where model is nested under result.model</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">syncMapTo3D — successful 3D generation &mdash; model.url is null when upstream provides no URL field</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">syncMapTo3D — successful 3D generation &mdash; revision defaults to a number (Date.now) when not provided in request</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">syncMapTo3D — upstream errors &mdash; returns 502 when the 3D service throws without a response</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">syncMapTo3D — upstream errors &mdash; returns the upstream HTTP status when service returns a 4xx error</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">22</td><td class="test-name">syncMapTo3D — upstream errors &mdash; error response includes success:false</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">23</td><td class="test-name">syncMapTo3D — upstream errors &mdash; error response includes code FLOORPLAN3D_UPSTREAM_ERROR</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">24</td><td class="test-name">syncMapTo3D — upstream errors &mdash; error message echoes upstream error text</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">25</td><td class="test-name">syncMapTo3D — upstream errors &mdash; retries on 500 errors (mockPost called more than once)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">26</td><td class="test-name">syncMapTo3D — upstream errors &mdash; does NOT retry on 400 (non-retryable client error)</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION 2 — INTEGRATION TESTS
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="section-title">Section 2 &mdash; Integration Tests (186 tests)</div>
+
+  <!-- ── auth.test.js ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">auth.test.js</div>
+        <div class="file-path">tests/auth.test.js &mdash; Authentication API routes</div>
+      </div>
+      <span class="file-badge">32 / 32 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">POST /api/auth/register &mdash; 201 – registers a new user successfully</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">POST /api/auth/register &mdash; 400 – missing name field returns error</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">POST /api/auth/register &mdash; 400 – missing email field returns error</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">POST /api/auth/register &mdash; 400 – missing password field returns error</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">POST /api/auth/register &mdash; 400 – passwords do not match</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">POST /api/auth/register &mdash; 400 – invalid email format</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">POST /api/auth/register &mdash; 400 – email existence validation fails</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">POST /api/auth/register &mdash; 400 – weak password returns error with errors array</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">POST /api/auth/register &mdash; 400 – email already registered</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">POST /api/auth/login &mdash; 200 – successful login returns token and user</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">POST /api/auth/login &mdash; 400 – missing email and password</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">POST /api/auth/login &mdash; 400 – missing password</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">POST /api/auth/login &mdash; 401 – user not found</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">POST /api/auth/login &mdash; 401 – wrong password</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">POST /api/auth/login &mdash; 403 – unverified user in production mode</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">POST /api/auth/login &mdash; response token is a valid JWT</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">POST /api/auth/forgot-password &mdash; 200 – returns safe message even when email exists</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">POST /api/auth/forgot-password &mdash; 200 – returns same safe message when email does NOT exist</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">POST /api/auth/forgot-password &mdash; 400 – missing email field</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">POST /api/auth/reset-password &mdash; 200 – resets password with valid token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">POST /api/auth/reset-password &mdash; 400 – missing token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">22</td><td class="test-name">POST /api/auth/reset-password &mdash; 400 – missing newPassword</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">23</td><td class="test-name">POST /api/auth/reset-password &mdash; 400 – new password too weak</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">24</td><td class="test-name">POST /api/auth/reset-password &mdash; 400 – invalid or expired token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">25</td><td class="test-name">POST /api/auth/verify-email &mdash; 400 – no token provided</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">26</td><td class="test-name">POST /api/auth/verify-email &mdash; 400 – invalid or expired token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">27</td><td class="test-name">POST /api/auth/verify-email &mdash; 200 – valid token verifies email and returns user</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">28</td><td class="test-name">GET /api/auth/me &mdash; 401 – no authorization header</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">29</td><td class="test-name">GET /api/auth/me &mdash; 401 – malformed authorization header</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">30</td><td class="test-name">GET /api/auth/me &mdash; 200 – returns current user for valid token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">31</td><td class="test-name">GET /api/auth/me &mdash; 401 – token signed with wrong secret</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">32</td><td class="test-name">GET /api/auth/me &mdash; 404 – user no longer exists in database</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── cost.test.js ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">cost.test.js</div>
+        <div class="file-path">tests/cost.test.js &mdash; Cost Estimation API routes</div>
+      </div>
+      <span class="file-badge">20 / 20 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">GET /api/cost-estimation/default-data &mdash; 200 – returns default data without authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">GET /api/cost-estimation/default-data &mdash; 200 – cities array includes Karachi, Lahore, Islamabad</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">GET /api/cost-estimation/default-data &mdash; 200 – constructionQualities contains Economy, Standard, Luxury</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">GET /api/cost-estimation/default-data &mdash; 401 – calculate route requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">POST /api/cost-estimation/calculate &mdash; 200 – returns cost estimate for valid input</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">POST /api/cost-estimation/calculate &mdash; 200 – estimate includes materialBreakdown array</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">POST /api/cost-estimation/calculate &mdash; 200 – estimate includes laborCost and materialCost</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">POST /api/cost-estimation/calculate &mdash; 400 – missing plotLength returns 400 with missingFields</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">POST /api/cost-estimation/calculate &mdash; 400 – missing location returns 400</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">POST /api/cost-estimation/calculate &mdash; 400 – invalid quality value returns 400</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">POST /api/cost-estimation/calculate &mdash; 400 – floors &lt; 1 returns 400</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">POST /api/cost-estimation/calculate &mdash; 200 – grey structure type is accepted</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">POST /api/cost-estimation/calculate &mdash; 200 – luxury quality yields higher totalCost than economy</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">POST /api/cost-estimation/save &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">POST /api/cost-estimation/save &mdash; 201 – saves estimate and returns estimateId</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">POST /api/cost-estimation/save &mdash; 400 – missing totalCost</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">POST /api/cost-estimation/save &mdash; 400 – missing plotAreaSqm</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">GET /api/cost-estimation/my-estimates &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">GET /api/cost-estimation/my-estimates &mdash; 200 – returns user estimates array</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">GET /api/cost-estimation/my-estimates &mdash; 200 – returns estimates with correct shape when present</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── maps.test.js ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">maps.test.js</div>
+        <div class="file-path">tests/maps.test.js &mdash; Maps API routes</div>
+      </div>
+      <span class="file-badge">24 / 24 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">GET /api/maps &mdash; 200 – returns maps array without authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">GET /api/maps &mdash; 200 – returns empty maps array when no maps exist</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">GET /api/maps &mdash; 200 – map objects contain expected fields</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">GET /api/maps/room-type/:room_type &mdash; 200 – returns maps for given room_type</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">GET /api/maps/room-type/:room_type &mdash; 200 – empty array for room type with no maps</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">POST /api/maps/by-specifications &mdash; 400 – missing roomSpecifications</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">POST /api/maps/by-specifications &mdash; 200 – empty maps when all room counts are zero</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">POST /api/maps/by-specifications &mdash; 200 – returns maps matching room specifications</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">POST /api/maps/generate-2d &mdash; 400 – missing numFloors</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">POST /api/maps/generate-2d &mdash; 400 – missing plot dimensions</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">POST /api/maps/generate-2d &mdash; 400 – missing marla</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">POST /api/maps/generate-2d &mdash; 400 – numFloors &gt; 20 is rejected</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">POST /api/maps/generate-2d &mdash; 200 – success:false with message when no maps exist in DB</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">POST /api/maps/generate-2d &mdash; 200 – returns matching maps when floor count and dims match</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">GET /api/maps/info/:id &mdash; 400 – non-numeric id</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">GET /api/maps/info/:id &mdash; 404 – map not found</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">GET /api/maps/info/:id &mdash; 200 – returns map info</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">POST /api/maps &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">POST /api/maps &mdash; 400 – missing title and file_path</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">POST /api/maps &mdash; 201 – creates map successfully</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">GET /api/maps/my-maps &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">22</td><td class="test-name">GET /api/maps/my-maps &mdash; 200 – returns user map generations</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">23</td><td class="test-name">GET /api/maps/:mapId &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">24</td><td class="test-name">GET /api/maps/:mapId &mdash; 404 – map not found</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── materials.test.js ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">materials.test.js</div>
+        <div class="file-path">tests/materials.test.js &mdash; Materials / Pricing API routes</div>
+      </div>
+      <span class="file-badge">14 / 14 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">GET /api/materials/prices &mdash; 200 – returns materials list without authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">GET /api/materials/prices &mdash; 200 – materials array length matches count field</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">GET /api/materials/prices &mdash; 200 – each material has id, name, cost_per_unit and unit</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">GET /api/materials/prices &mdash; 200 – returns empty array when no active materials</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">GET /api/materials/prices &mdash; 200 – source_url and last_scraped_at are present (null if not scraped)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">GET /api/materials/dashboard &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">GET /api/materials/dashboard &mdash; 403 – non-admin user is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">PUT /api/materials/materials/bulk-update &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">PUT /api/materials/materials/bulk-update &mdash; 403 – non-admin cannot bulk update</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">PUT /api/materials/materials/bulk-update &mdash; 400 – empty updates array returns 400</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">POST /api/materials/materials &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">POST /api/materials/materials &mdash; 403 – non-admin cannot add material</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">POST /api/materials/scrape-prices &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">POST /api/materials/scrape-prices &mdash; 403 – non-admin is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── feedback.test.js ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">feedback.test.js</div>
+        <div class="file-path">tests/feedback.test.js &mdash; Feedback API routes</div>
+      </div>
+      <span class="file-badge">21 / 21 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">GET /api/feedback/all &mdash; 200 – returns feedback list without authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">GET /api/feedback/all &mdash; 200 – feedback item contains id, name, rating, comment, created_at</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">GET /api/feedback/all &mdash; 200 – feedback item does NOT expose email</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">GET /api/feedback/all &mdash; 200 – count field equals length of feedback array</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">GET /api/feedback/all &mdash; 200 – returns empty array when no feedback exists</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">GET /api/feedback/stats &mdash; 200 – returns stats without authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">GET /api/feedback/stats &mdash; 200 – stats has total, average, distribution fields</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">GET /api/feedback/stats &mdash; 200 – distribution contains ratings 1-5 as keys</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">GET /api/feedback/stats &mdash; 200 – average is returned as a string with 1 decimal</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">POST /api/feedback/add &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">POST /api/feedback/add &mdash; 400 – missing rating</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">POST /api/feedback/add &mdash; 400 – missing comment</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">POST /api/feedback/add &mdash; 400 – rating of 0 is rejected (falsy check fires first)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">POST /api/feedback/add &mdash; 400 – rating of 6 is rejected</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">POST /api/feedback/add &mdash; 400 – comment shorter than 10 chars</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">POST /api/feedback/add &mdash; 400 – comment longer than 1000 chars</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">POST /api/feedback/add &mdash; 201 – creates new feedback when user has none</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">POST /api/feedback/add &mdash; 200 – updates existing feedback when user already submitted</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">GET /api/feedback/my-feedback &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">GET /api/feedback/my-feedback &mdash; 200 – returns null feedback when none submitted</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">GET /api/feedback/my-feedback &mdash; 200 – returns user feedback object when submitted</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── admin.test.js ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">admin.test.js</div>
+        <div class="file-path">tests/admin.test.js &mdash; Admin API routes</div>
+      </div>
+      <span class="file-badge">40 / 40 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">GET /api/admin/stats &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">GET /api/admin/stats &mdash; 403 – non-admin user</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">GET /api/admin/stats &mdash; 200 – admin gets system stats</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">GET /api/admin/stats &mdash; 200 – stats values are numbers</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">GET /api/admin/users &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">GET /api/admin/users &mdash; 403 – non-admin is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">GET /api/admin/users &mdash; 200 – admin gets all users list</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">GET /api/admin/users &mdash; 200 – empty users array when no users</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">POST /api/admin/users/:userId/role &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">POST /api/admin/users/:userId/role &mdash; 403 – non-admin is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">POST /api/admin/users/:userId/role &mdash; 400 – invalid role value</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">POST /api/admin/users/:userId/role &mdash; 400 – missing userId</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">POST /api/admin/users/:userId/role &mdash; 200 – admin updates user role to admin</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">POST /api/admin/users/:userId/role &mdash; 200 – admin downgrades admin to user</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">POST /api/admin/update-costs &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">POST /api/admin/update-costs &mdash; 403 – non-admin is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">POST /api/admin/update-costs &mdash; 400 – missing baseCost</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">POST /api/admin/update-costs &mdash; 400 – missing laborCost</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">POST /api/admin/update-costs &mdash; 200 – creates new cost config when none exists</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">POST /api/admin/update-costs &mdash; 200 – updates existing cost config</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">GET /api/admin/materials &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">22</td><td class="test-name">GET /api/admin/materials &mdash; 403 – non-admin is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">23</td><td class="test-name">GET /api/admin/materials &mdash; 200 – admin gets materials list</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">24</td><td class="test-name">GET /api/admin/materials &mdash; 200 – materials count matches array length</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">25</td><td class="test-name">PUT /api/admin/materials/cost &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">26</td><td class="test-name">PUT /api/admin/materials/cost &mdash; 403 – non-admin is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">27</td><td class="test-name">PUT /api/admin/materials/cost &mdash; 400 – missing materialId</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">28</td><td class="test-name">PUT /api/admin/materials/cost &mdash; 400 – negative costPerUnit</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">29</td><td class="test-name">PUT /api/admin/materials/cost &mdash; 404 – material not found</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">30</td><td class="test-name">PUT /api/admin/materials/cost &mdash; 200 – updates material cost successfully</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">31</td><td class="test-name">GET /api/admin/maps &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">32</td><td class="test-name">GET /api/admin/maps &mdash; 403 – non-admin is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">33</td><td class="test-name">GET /api/admin/maps &mdash; 200 – admin gets all maps (empty)</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">34</td><td class="test-name">DELETE /api/admin/maps/:id &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">35</td><td class="test-name">DELETE /api/admin/maps/:id &mdash; 403 – non-admin is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">36</td><td class="test-name">DELETE /api/admin/maps/:id &mdash; 404 – map not found</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">37</td><td class="test-name">PUT /api/admin/maps/:id &mdash; 401 – no token</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">38</td><td class="test-name">PUT /api/admin/maps/:id &mdash; 403 – non-admin is forbidden</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">39</td><td class="test-name">PUT /api/admin/maps/:id &mdash; 404 – map not found</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">40</td><td class="test-name">PUT /api/admin/maps/:id &mdash; 200 – updates map successfully</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── jsonMaps.test.js ── -->
+  <div class="file-block">
+    <div class="file-header">
+      <div>
+        <div class="file-name">jsonMaps.test.js</div>
+        <div class="file-path">tests/jsonMaps.test.js &mdash; JSON Map Editor API routes</div>
+      </div>
+      <span class="file-badge">35 / 35 PASSED</span>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Test Name</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num-col">1</td><td class="test-name">GET /api/json-maps/sample &mdash; 200 – returns basic template when sample file is missing</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">2</td><td class="test-name">GET /api/json-maps/sample &mdash; 200 – sample map contains metadata and entities</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">3</td><td class="test-name">GET /api/json-maps/sample &mdash; 200 – no auth required</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">4</td><td class="test-name">GET /api/json-maps/templates &mdash; 200 – returns empty templates list without auth</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">5</td><td class="test-name">GET /api/json-maps/templates &mdash; 200 – returns template entries with id, name, description</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">6</td><td class="test-name">GET /api/json-maps &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">7</td><td class="test-name">GET /api/json-maps &mdash; 200 – returns empty maps for new user</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">8</td><td class="test-name">GET /api/json-maps &mdash; 200 – returns user maps list</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">9</td><td class="test-name">GET /api/json-maps &mdash; 200 – maps array length matches result count</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">10</td><td class="test-name">GET /api/json-maps/:mapId &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">11</td><td class="test-name">GET /api/json-maps/:mapId &mdash; 404 – map not found</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">12</td><td class="test-name">GET /api/json-maps/:mapId &mdash; 200 – returns map with parsed map_data</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">13</td><td class="test-name">POST /api/json-maps &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">14</td><td class="test-name">POST /api/json-maps &mdash; 400 – missing name</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">15</td><td class="test-name">POST /api/json-maps &mdash; 400 – missing map_data</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">16</td><td class="test-name">POST /api/json-maps &mdash; 400 – map_data missing metadata field</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">17</td><td class="test-name">POST /api/json-maps &mdash; 400 – map_data missing entities field</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">18</td><td class="test-name">POST /api/json-maps &mdash; 201 – creates map and returns mapId</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">19</td><td class="test-name">PUT /api/json-maps/:mapId &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">20</td><td class="test-name">PUT /api/json-maps/:mapId &mdash; 404 – map not found</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">21</td><td class="test-name">PUT /api/json-maps/:mapId &mdash; 403 – cannot edit another user map</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">22</td><td class="test-name">PUT /api/json-maps/:mapId &mdash; 400 – no fields to update</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">23</td><td class="test-name">PUT /api/json-maps/:mapId &mdash; 200 – updates map name successfully</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">24</td><td class="test-name">DELETE /api/json-maps/:mapId &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">25</td><td class="test-name">DELETE /api/json-maps/:mapId &mdash; 404 – map not found</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">26</td><td class="test-name">DELETE /api/json-maps/:mapId &mdash; 403 – cannot delete another user map</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">27</td><td class="test-name">DELETE /api/json-maps/:mapId &mdash; 200 – deletes own map successfully</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">28</td><td class="test-name">POST /api/json-maps/clone/:mapId &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">29</td><td class="test-name">POST /api/json-maps/clone/:mapId &mdash; 404 – source map not found</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">30</td><td class="test-name">POST /api/json-maps/clone/:mapId &mdash; 201 – clones map and returns new mapId</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">31</td><td class="test-name">POST /api/json-maps/clone/:mapId &mdash; 201 – uses default name when no name provided</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">32</td><td class="test-name">GET /api/json-maps/search &mdash; 401 – requires authentication</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">33</td><td class="test-name">GET /api/json-maps/search &mdash; 200 – returns empty maps when no match</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">34</td><td class="test-name">GET /api/json-maps/search &mdash; 200 – returns matching maps by dimensions</td><td class="status pass">&#10003; PASS</td></tr>
+        <tr><td class="num-col">35</td><td class="test-name">GET /api/json-maps/search &mdash; 200 – falls back to marla matching when dimensions do not match</td><td class="status pass">&#10003; PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    Map2Home Test Report &mdash; Generated by Jest 29 with coverage &mdash; 15 June 2026
+  </div>
+
+</div>
+</body>
+</html>
