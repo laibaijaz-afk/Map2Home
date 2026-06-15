@@ -50,7 +50,10 @@ async function initDb() {
 
   let connection;
   try {
-    connection = await mysql.createConnection({ host, user, password, port });
+    connection = await mysql.createConnection({
+      host, user, password, port,
+      ...(process.env.NODE_ENV === 'production' && { ssl: { rejectUnauthorized: false } })
+    });
 
     // Floor-plan JSON can exceed MySQL's default 1MB packet limit, which causes
     // saves to fail with a connection reset (ECONNRESET). Raise it to 64MB for
